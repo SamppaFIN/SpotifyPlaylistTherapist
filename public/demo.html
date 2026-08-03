@@ -222,13 +222,13 @@
     <div class="hero" style="padding:2rem 1rem">
       <span class="emoji-big">🎧</span>
       <h1>Mitä soittolistasi kertoo sinusta?</h1>
-      <p>Liitä Spotify ja anna <strong>Psyko</strong> analysoida biisisi — tai kokeile mock-datalla.</p>
+      <p>Liitä Spotify ja anna <strong>Psyko</strong> analysoida biisisi.</p>
 
-      <!-- Spotify Client ID -syöttö -->
+      <!-- Vaihe 1: Spotify Client ID -->
       <div class="report-section" style="max-width:420px;margin:1rem auto;text-align:left">
-        <label style="font-size:0.8rem;color:var(--c-text2)">Spotify Client ID</label>
+        <label style="font-size:0.8rem;color:var(--c-text2)">1️⃣ Spotify Client ID</label>
         <div style="display:flex;gap:0.5rem;margin-top:0.25rem">
-          <input type="text" id="clientIdInput" placeholder="abc123..." style="flex:1;padding:0.5rem 0.75rem;border-radius:8px;border:1.5px solid var(--c-surface2);background:var(--c-bg);color:var(--c-text);font-size:0.85rem" />
+          <input type="text" id="clientIdInput" placeholder="52ad6316..." style="flex:1;padding:0.5rem 0.75rem;border-radius:8px;border:1.5px solid var(--c-surface2);background:var(--c-bg);color:var(--c-text);font-size:0.85rem" />
           <button class="btn btn-sm btn-outline" onclick="saveClientId()" style="white-space:nowrap">💾 Tallenna</button>
         </div>
         <p style="font-size:0.7rem;color:var(--c-text2);margin-top:0.25rem">
@@ -236,18 +236,30 @@
         </p>
       </div>
 
-      <!-- Soittolistan URL -->
+      <!-- Vaihe 2: Kirjaudu Spotifyhin -->
       <div class="report-section" style="max-width:420px;margin:1rem auto;text-align:left">
-        <label style="font-size:0.8rem;color:var(--c-text2)">Soittolistan Spotify-linkki</label>
-        <input type="text" id="playlistUrlInput" placeholder="https://open.spotify.com/playlist/..." value="https://open.spotify.com/playlist/5L4MWKG02WiFebCM4O2dxd?si=4d706900a2764166" style="width:100%;padding:0.5rem 0.75rem;border-radius:8px;border:1.5px solid var(--c-surface2);background:var(--c-bg);color:var(--c-text);font-size:0.85rem;margin-top:0.25rem;box-sizing:border-box" />
+        <label style="font-size:0.8rem;color:var(--c-text2)">2️⃣ Kirjaudu Spotifyhin</label>
+        <div id="spotifyStatus" style="margin-top:0.25rem">
+          <button class="btn btn-primary" onclick="spotifyLoginOnly()">
+            🎵 Kirjaudu Spotifyhin
+          </button>
+        </div>
+        <p style="font-size:0.7rem;color:var(--c-text2);margin-top:0.25rem" id="spotifyStatusText">
+          Kirjaudu ensin, jotta näemme soittolistasi.
+        </p>
       </div>
 
-      <button class="btn btn-primary" onclick="startRealAnalysis()" style="margin-top:0.75rem">
-        🔍 Analysoi soittolista
-      </button>
-      <br>
-      <button class="btn btn-outline" onclick="loadMockAnalysis()" style="margin-top:0.5rem">
-        🧪 Kokeile mock-datalla
+      <!-- Vaihe 3: Soittolistan URL + analyysi -->
+      <div class="report-section" style="max-width:420px;margin:1rem auto;text-align:left" id="step3Section">
+        <label style="font-size:0.8rem;color:var(--c-text2)">3️⃣ Soittolistan Spotify-linkki</label>
+        <input type="text" id="playlistUrlInput" placeholder="https://open.spotify.com/playlist/..." value="https://open.spotify.com/playlist/5L4MWKG02WiFebCM4O2dxd?si=4d706900a2764166" style="width:100%;padding:0.5rem 0.75rem;border-radius:8px;border:1.5px solid var(--c-surface2);background:var(--c-bg);color:var(--c-text);font-size:0.85rem;margin-top:0.25rem;box-sizing:border-box" />
+        <button class="btn btn-primary" onclick="startRealAnalysis()" style="margin-top:0.5rem;width:100%">
+          🔍 Analysoi soittolista
+        </button>
+      </div>
+
+      <button class="btn btn-outline" onclick="loadMockAnalysis()" style="margin-top:0.75rem">
+        🧪 Kokeile mock-datalla (ei vaadi kirjautumista)
       </button>
     </div>
     <div class="report-section" style="margin-top:1rem">
@@ -565,6 +577,12 @@ async function spotifyLogin() {
     scope: SCOPES,
   });
   window.location.href = `${SPOTIFY_AUTH}/authorize?${params}`;
+}
+
+/** Pelkkä kirjautuminen — ei triggeröi analyysiä */
+async function spotifyLoginOnly() {
+  sessionStorage.removeItem('pending_playlist_url'); // Ei jatketa analyysiin
+  await spotifyLogin();
 }
 
 async function handleSpotifyCallback() {
@@ -1162,14 +1180,18 @@ async function init() {
   const saved = getClientId();
   if (saved) document.getElementById('clientIdInput').value = saved;
 
+  // Näytä kirjautumistila
+  await updateLoginStatus();
+
   // Tarkista onko paluu Spotify-authista (?code=...)
   const params = new URLSearchParams(window.location.search);
   if (params.has('code')) {
     const ok = await handleSpotifyCallback();
     if (ok) {
-      // Jatka analyysiä — hae playlist ID URL:sta jos tallessa
+      await updateLoginStatus();
       const pendingUrl = sessionStorage.getItem('pending_playlist_url');
       if (pendingUrl) {
+        // Jatka suoraan analyysiin
         sessionStorage.removeItem('pending_playlist_url');
         document.getElementById('playlistUrlInput').value = pendingUrl;
         const playlistId = parsePlaylistUrl(pendingUrl);
@@ -1179,11 +1201,21 @@ async function init() {
           return;
         }
       }
-      // Ei pending URL:ia — näytä landing
+      // Vain kirjautuminen — näytä onnistumisviesti
       document.getElementById('landingError').style.display = 'block';
       document.getElementById('landingError').innerHTML =
         '<div class="report-section" style="border-left:3px solid var(--c-success);color:var(--c-success)">✅ Kirjautuminen onnistui! Syötä soittolistan URL ja klikkaa "Analysoi soittolista".</div>';
     }
+  }
+}
+
+async function updateLoginStatus() {
+  const hasToken = await getValidToken();
+  const statusEl = document.getElementById('spotifyStatus');
+  const statusText = document.getElementById('spotifyStatusText');
+  if (hasToken && statusEl) {
+    statusEl.innerHTML = '<span style="color:var(--c-success);font-weight:600">✅ Kirjautunut Spotifyhin</span>';
+    statusText.textContent = 'Olet kirjautunut — nyt voit analysoida soittolistasi.';
   }
 }
 
