@@ -690,7 +690,7 @@ async function spotifyFetch(path, retry = true) {
 
   if (!res.ok) {
     console.warn(`⚠️ Spotify API ${res.status}: ${path}`);
-    return null;
+    return { _error: res.status, _path: path };
   }
   return res.json();
 }
@@ -703,6 +703,11 @@ function parsePlaylistUrl(url) {
 async function fetchPlaylistMeta(playlistId) {
   console.log('📋 Haetaan soittolistan metadata:', playlistId);
   const data = await spotifyFetch(`/playlists/${playlistId}`);
+  if (data?._error) {
+    console.warn('📋 Meta virhe:', data._error);
+    if (data._error === 403) throw new Error('403_PLAYLIST_FORBIDDEN');
+    return null;
+  }
   console.log('📋 Meta vastaus:', data ? `${data.name} — ${data.tracks?.total} biisiä` : 'NULL');
   return data;
 }
@@ -715,6 +720,11 @@ async function fetchAllPlaylistTracks(playlistId) {
     pageNum++;
     console.log(`📋 Haetaan tracks sivu ${pageNum}:`, url);
     const page = await spotifyFetch(url.replace(SPOTIFY_API, ''));
+    if (page?._error) {
+      console.warn(`📋 Tracks virhe ${page._error}`);
+      if (page._error === 403) throw new Error('403_PLAYLIST_FORBIDDEN');
+      break;
+    }
     if (!page) { console.warn('📋 NULL page — API-kutsu epäonnistui'); break; }
     const validTracks = page.items.filter(i => i.track);
     console.log(`📋 Sivu ${pageNum}: ${validTracks.length} biisiä (${page.items.length} yhteensä, next: ${page.next ? 'kyllä' : 'ei'})`);
@@ -1011,8 +1021,10 @@ async function runSpotifyAnalysis(playlistId) {
   } catch (err) {
     showView('landing');
     const msg = err.message || String(err);
-    // Tunnista auth-ongelmat
-    if (msg.includes('401') || msg.includes('token') || msg.includes('kirjautunut')) {
+    if (msg === '403_PLAYLIST_FORBIDDEN') {
+      showLandingError('🔒 403 — Ei oikeutta soittolistaan.<br><br><strong>Todennäköinen syy:</strong> Sovelluksesi on "Development mode" -tilassa. Mene <a href="https://developer.spotify.com/dashboard" target="_blank" style="color:var(--c-accent)">Spotify Dashboardiin</a> → "Users and access" → lisää oma Spotify-sähköpostiosoitteesi.<br><br>Sen jälkeen: kirjaudu ulos ja uudelleen.');
+      updateLoginStatus();
+    } else if (msg.includes('401') || msg.includes('token') || msg.includes('kirjautunut')) {
       showLandingError('🔐 Token vanhentunut. Klikkaa "Kirjaudu Spotifyhin" uudelleen.');
       updateLoginStatus();
     } else {
