@@ -1022,7 +1022,7 @@ async function runSpotifyAnalysis(playlistId) {
     showView('landing');
     const msg = err.message || String(err);
     if (msg === '403_PLAYLIST_FORBIDDEN') {
-      showLandingError('🔒 403 — Ei oikeutta soittolistaan.<br><br><strong>Todennäköinen syy:</strong> Sovelluksesi on "Development mode" -tilassa. Mene <a href="https://developer.spotify.com/dashboard" target="_blank" style="color:var(--c-accent)">Spotify Dashboardiin</a> → "Users and access" → lisää oma Spotify-sähköpostiosoitteesi.<br><br>Sen jälkeen: kirjaudu ulos ja uudelleen.');
+      showLandingError('🔒 403 — Ei oikeutta soittolistaan.<br><br><strong>Todennäköisiä syitä:</strong><br>1. Kirjauduit <strong>eri Spotify-tilillä</strong> kuin millä loit soittolistan (esim. Google vs. sähköposti).<br>2. Sovellus on "Development mode" -tilassa — lisää käyttäjä Spotify Dashboardissa.<br><br><strong>Kokeile:</strong> kirjaudu ulos → kirjaudu Spotifyhin <strong>sähköpostilla ja salasanalla</strong> (älä Googlella).');
       updateLoginStatus();
     } else if (msg.includes('401') || msg.includes('token') || msg.includes('kirjautunut')) {
       showLandingError('🔐 Token vanhentunut. Klikkaa "Kirjaudu Spotifyhin" uudelleen.');
@@ -1290,10 +1290,12 @@ async function updateLoginStatus() {
   const btnLogout = document.getElementById('btnLogout');
 
   if (tokens && statusEl) {
-    // Tokenit olemassa — näytä kirjautuneena
+    // Näytä kirjautuneena + hae profiilinimi
     statusEl.innerHTML = '<span style="color:var(--c-success);font-weight:600">✅ Kirjautunut Spotifyhin</span>';
     statusText.textContent = 'Olet kirjautunut — nyt voit analysoida soittolistasi.';
     if (btnLogout) btnLogout.style.display = '';
+    // Hae profiili näytettäväksi
+    fetchProfileName();
   } else {
     if (statusEl) {
       statusEl.innerHTML = '<button class="btn btn-primary" onclick="spotifyLoginOnly()">🎵 Kirjaudu Spotifyhin</button>';
@@ -1302,6 +1304,16 @@ async function updateLoginStatus() {
       statusText.textContent = 'Kirjaudu ensin, jotta näemme soittolistasi.';
     }
     if (btnLogout) btnLogout.style.display = 'none';
+  }
+}
+
+async function fetchProfileName() {
+  const data = await spotifyFetch('/me');
+  if (data && !data._error) {
+    const statusText = document.getElementById('spotifyStatusText');
+    if (statusText && data.display_name) {
+      statusText.textContent = `Kirjautunut: ${data.display_name} (${data.email || data.id}) — nyt voit analysoida soittolistasi.`;
+    }
   }
 }
 
