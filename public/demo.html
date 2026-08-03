@@ -509,8 +509,10 @@ const SCOPES = 'playlist-read-private playlist-read-collaborative user-read-priv
 // CLIENT ID -hallinta
 // ═══════════════════════════════════════════════════════════
 
+const DEFAULT_CLIENT_ID = '52ad63161c934c75ba145d6ab53e2275';
+
 function getClientId() {
-  return localStorage.getItem('spotify_client_id') || '';
+  return localStorage.getItem('spotify_client_id') || DEFAULT_CLIENT_ID;
 }
 
 function saveClientId() {
@@ -522,8 +524,6 @@ function saveClientId() {
     setTimeout(() => input.style.borderColor = 'var(--c-surface2)', 2000);
   }
 }
-
-// Alusta Client ID -kenttä (hoidetaan init():ssä)
 
 // ═══════════════════════════════════════════════════════════
 // SPOTIFY OAuth PKCE (vanilla JS)
@@ -1182,9 +1182,13 @@ function sleep(ms) {
 // ═══════════════════════════════════════════════════════════
 
 async function init() {
-  // Palauta tallennettu Client ID
-  const saved = getClientId();
-  if (saved) document.getElementById('clientIdInput').value = saved;
+  // Täytä Client ID (tallennettu tai oletus) ja auto-save
+  const saved = localStorage.getItem('spotify_client_id');
+  const clientId = saved || DEFAULT_CLIENT_ID;
+  document.getElementById('clientIdInput').value = clientId;
+  if (!saved) {
+    localStorage.setItem('spotify_client_id', clientId);
+  }
 
   // Näytä kirjautumistila
   await updateLoginStatus();
