@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>🎧 SpotifyPlaylistTherapist — Psykoanalyysi</title>
+  <style>
+    /* === Design System === */
+    :root {
+      --c-bg: oklch(0.10 0.02 260);
+      --c-surface: oklch(0.15 0.02 260);
+      --c-surface2: oklch(0.19 0.02 260);
+      --c-text: oklch(0.90 0.01 260);
+      --c-text2: oklch(0.65 0.02 260);
+      --c-accent: oklch(0.62 0.20 240);
+      --c-accent2: oklch(0.55 0.22 300);
+      --c-success: oklch(0.62 0.20 145);
+      --c-danger: oklch(0.52 0.22 25);
+      --c-warning: oklch(0.70 0.18 85);
+      --touch-target: 44px;
+      --radius: 12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: clamp(14px, 2.5vw, 18px); }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--c-bg);
+      color: var(--c-text);
+      min-height: 100dvh;
+      line-height: 1.5;
+    }
+
+    /* === Header === */
+    header {
+      position: sticky; top: 0; z-index: 10;
+      backdrop-filter: blur(16px);
+      background: oklch(0.10 0.02 260 / 0.85);
+      border-bottom: 1px solid oklch(1 0 0 / 0.08);
+      padding: 0.75rem 1rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { font-size: 1.3rem; font-weight: 700; }
+    .logo span { color: var(--c-accent); }
+
+    /* === Buttons === */
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.6rem 1.2rem;
+      border: none; border-radius: var(--radius);
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+      min-height: var(--touch-target);
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary { background: var(--c-accent); color: #fff; }
+    .btn-outline { background: transparent; border: 1.5px solid var(--c-surface2); color: var(--c-text); }
+    .btn-danger { background: var(--c-danger); color: #fff; }
+    .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+
+    /* === Layout === */
+    main { max-width: 800px; margin: 0 auto; padding: 1rem; }
+
+    /* === Views === */
+    .view { display: none; }
+    .view.active { display: block; animation: fadeIn 0.3s ease; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* === Landing === */
+    .hero {
+      text-align: center; padding: 3rem 1rem;
+    }
+    .hero h1 { font-size: clamp(1.8rem, 5vw, 2.5rem); margin-bottom: 0.75rem; }
+    .hero p { color: var(--c-text2); max-width: 500px; margin: 0 auto 1.5rem; }
+    .hero .emoji-big { font-size: 4rem; display: block; margin-bottom: 1rem; }
+
+    /* === Playlist Selector === */
+    .playlist-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.75rem; margin-top: 1rem;
+    }
+    .playlist-card {
+      background: var(--c-surface); border-radius: var(--radius);
+      padding: 0.75rem; cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .playlist-card:hover, .playlist-card:focus-visible {
+      border-color: var(--c-accent); background: var(--c-surface2);
+    }
+    .playlist-card img {
+      width: 100%; aspect-ratio: 1; object-fit: cover;
+      border-radius: 6px; margin-bottom: 0.5rem; background: var(--c-surface2);
+    }
+    .playlist-card .name { font-weight: 600; font-size: 0.85rem; }
+    .playlist-card .count { color: var(--c-text2); font-size: 0.75rem; margin-top: 0.2rem; }
+
+    /* === Analysis View === */
+    .report-section {
+      background: var(--c-surface); border-radius: var(--radius);
+      padding: 1.25rem; margin-bottom: 1rem;
+    }
+    .report-section h2 {
+      font-size: 1rem; margin-bottom: 0.75rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    /* Headline */
+    .headline {
+      font-size: clamp(1.2rem, 3vw, 1.6rem);
+      font-weight: 700; line-height: 1.3;
+      background: linear-gradient(135deg, var(--c-accent), var(--c-accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.75rem;
+    }
+
+    /* Insanity Meter */
+    .insanity-meter {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 1rem; background: var(--c-surface2); border-radius: var(--radius);
+      margin: 1rem 0;
+    }
+    .insanity-bar {
+      flex: 1; height: 12px; background: var(--c-surface);
+      border-radius: 6px; overflow: hidden;
+    }
+    .insanity-fill {
+      height: 100%; border-radius: 6px;
+      background: linear-gradient(90deg, var(--c-success), var(--c-warning), var(--c-danger));
+      transition: width 0.6s ease;
+    }
+    .insanity-value { font-weight: 700; font-size: 1.5rem; min-width: 3rem; text-align: right; }
+
+    /* Big Five */
+    .big-five { display: flex; flex-direction: column; gap: 0.5rem; }
+    .trait-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+    .trait-label { width: 130px; text-align: right; }
+    .trait-bar-wrap {
+      flex: 1; height: 8px; background: var(--c-surface2); border-radius: 4px; overflow: hidden;
+    }
+    .trait-bar {
+      height: 100%; border-radius: 4px;
+      background: var(--c-accent); transition: width 0.5s ease;
+    }
+    .trait-desc { width: 160px; color: var(--c-text2); font-size: 0.75rem; }
+
+    /* Emotion quadrant */
+    .emotion-badge {
+      display: inline-block; padding: 0.4rem 0.9rem;
+      background: var(--c-surface2); border-radius: 100px;
+      font-weight: 600; font-size: 1rem;
+    }
+
+    /* Rating stars */
+    .stars { color: var(--c-warning); font-size: 1.2rem; letter-spacing: 2px; }
+
+    /* Adjectives */
+    .adjectives { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .adj-tag {
+      padding: 0.3rem 0.8rem;
+      background: oklch(0.25 0.04 300 / 0.4);
+      border-radius: 100px; font-size: 0.85rem;
+    }
+
+    /* Profile card */
+    .profile-card {
+      text-align: center; padding: 1.5rem;
+    }
+    .profile-card .avatar {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--c-accent), var(--c-accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; margin: 0 auto 0.75rem;
+    }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 0.25rem; margin-bottom: 1rem; }
+    .tab {
+      padding: 0.5rem 1rem; border: none; background: transparent;
+      color: var(--c-text2); font-size: 0.85rem; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: all 0.2s;
+    }
+    .tab.active { color: var(--c-accent); border-bottom-color: var(--c-accent); }
+
+    /* Loading */
+    .spinner {
+      width: 40px; height: 40px; border: 3px solid var(--c-surface2);
+      border-top-color: var(--c-accent); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 2rem auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* States */
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--c-text2); }
+    .empty-state .icon { font-size: 3rem; display: block; margin-bottom: 0.5rem; }
+
+    /* Responsive */
+    @media (max-width: 500px) {
+      .trait-label { width: 80px; font-size: 0.75rem; }
+      .trait-desc { width: 100px; font-size: 0.7rem; }
+      .big-five { font-size: 0.8rem; }
+      header { padding: 0.5rem 0.75rem; }
+      .logo { font-size: 1.1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎧 <span>Psyko</span>Analyysi</div>
+  <button class="btn btn-sm btn-outline" id="btnLogout" style="display:none" onclick="logout()">Kirjaudu ulos</button>
+  <button class="btn btn-sm btn-outline" id="btnReset" onclick="resetApp()">↻ Uusi analyysi</button>
+</header>
+
+<main>
+  <!-- View 1: Landing -->
+  <div class="view active" id="view-landing">
+    <div class="hero" style="padding:2rem 1rem">
+      <span class="emoji-big">🎧</span>
+      <h1>Mitä soittolistasi kertoo sinusta?</h1>
+      <p>Liitä Spotify ja anna <strong>Psyko</strong> analysoida biisisi — tai kokeile mock-datalla.</p>
+
+      <!-- Spotify Client ID -syöttö -->
+      <div class="report-section" style="max-width:420px;margin:1rem auto;text-align:left">
+        <label style="font-size:0.8rem;color:var(--c-text2)">Spotify Client ID</label>
+        <div style="display:flex;gap:0.5rem;margin-top:0.25rem">
+          <input type="text" id="clientIdInput" placeholder="abc123..." style="flex:1;padding:0.5rem 0.75rem;border-radius:8px;border:1.5px solid var(--c-surface2);background:var(--c-bg);color:var(--c-text);font-size:0.85rem" />
+          <button class="btn btn-sm btn-outline" onclick="saveClientId()" style="white-space:nowrap">💾 Tallenna</button>
+        </div>
+        <p style="font-size:0.7rem;color:var(--c-text2);margin-top:0.25rem">
+          <a href="https://developer.spotify.com/dashboard" target="_blank" style="color:var(--c-accent)">Luo Client ID</a> — Redirect URI: <code>http://localhost:5555/demo.html</code>
+        </p>
+      </div>
+
+      <!-- Soittolistan URL -->
+      <div class="report-section" style="max-width:420px;margin:1rem auto;text-align:left">
+        <label style="font-size:0.8rem;color:var(--c-text2)">Soittolistan Spotify-linkki</label>
+        <input type="text" id="playlistUrlInput" placeholder="https://open.spotify.com/playlist/..." value="https://open.spotify.com/playlist/5L4MWKG02WiFebCM4O2dxd?si=4d706900a2764166" style="width:100%;padding:0.5rem 0.75rem;border-radius:8px;border:1.5px solid var(--c-surface2);background:var(--c-bg);color:var(--c-text);font-size:0.85rem;margin-top:0.25rem;box-sizing:border-box" />
+      </div>
+
+      <button class="btn btn-primary" onclick="startRealAnalysis()" style="margin-top:0.75rem">
+        🔍 Analysoi soittolista
+      </button>
+      <br>
+      <button class="btn btn-outline" onclick="loadMockAnalysis()" style="margin-top:0.5rem">
+        🧪 Kokeile mock-datalla
+      </button>
+    </div>
+    <div class="report-section" style="margin-top:1rem">
+      <p style="color:var(--c-text2);font-size:0.8rem;text-align:center">
+        🔒 Kaikki tapahtuu selaimessasi. Client ID ja tokenit säilytetään vain sinun koneellasi.<br>
+        Soittolistan <strong>ei tarvitse olla julkinen</strong> — kirjaudut Spotify-tunnuksillasi.
+      </p>
+    </div>
+    <div id="landingError" style="display:none;margin-top:0.5rem"></div>
+  </div>
+
+  <!-- View 3: Loading / Analyzing -->
+  <div class="view" id="view-loading">
+    <div style="text-align:center;padding:3rem 1rem">
+      <div class="spinner"></div>
+      <p style="margin-top:1rem;color:var(--c-text2)">Psyko analysoi soittolistaasi...</p>
+      <p style="font-size:0.8rem;color:var(--c-text2)" id="loadingStatus"></p>
+    </div>
+  </div>
+
+  <!-- View 4: Analysis Result -->
+  <div class="view" id="view-report">
+    <div id="reportContent"></div>
+  </div>
+</main>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// FALLBACK MOCK DATA — 3 eri soittolistaprofiilia
+// ═══════════════════════════════════════════════════════════
+
+const MOCK_PLAYLISTS = [
+  {
+    id: 'mock-sad-boi',
+    name: 'Sad Boi Hours 🥀',
+    description: 'Kun sataa ja sydän on särkynyt',
+    image: null,
+    tracks: { total: 42 },
+    profile: 'melankolinen',
+  },
+  {
+    id: 'mock-party',
+    name: 'Bileet 24/7 🎉',
+    description: 'Tanssilattialle, nyt ja heti',
+    image: null,
+    tracks: { total: 58 },
+    profile: 'bilettäjä',
+  },
+  {
+    id: 'mock-hipster',
+    name: 'Deep Cuts & Vinyls 📀',
+    description: 'Vain oikeat tietäjät kuuntelee näitä',
+    image: null,
+    tracks: { total: 35 },
+    profile: 'hypsteri',
+  },
+];
+
+const MOCK_ANALYSES = {
+  'mock-sad-boi': {
+    meta: {
+      playlistName: 'Sad Boi Hours 🥀',
+      playlistDescription: 'Kun sataa ja sydän on särkynyt',
+      trackCount: 42, analyzedAt: new Date().toISOString(), totalDurationMs: 9120000,
+    },
+    audio: {
+      averages: {
+        count: 42, acousticness: 0.72, danceability: 0.31, energy: 0.25,
+        instrumentalness: 0.15, liveness: 0.12, loudness: -14.2,
+        speechiness: 0.08, valence: 0.18, tempo: 78, majorKeyRatio: 0.28,
+      },
+    },
+    emotion: { quadrant: 'surullinen 😢', label: 'surullinen', valence: 0.18, energy: 0.25 },
+    bigFive: {
+      openness: 0.74, conscientiousness: 0.41, extraversion: 0.22,
+      agreeableness: 0.55, neuroticism: 0.81,
+      labels: {
+        openness: 'äärimmäisen avoin 🌌', conscientiousness: 'spontaani 🎲',
+        extraversion: 'introvertti 🦉', agreeableness: 'tasapainossa ⚖️',
+        neuroticism: 'hermoromahduksen partaalla 💥',
+      },
+    },
+    vibe: {
+      primaryMood: 'melankolinen 🥀', energyLevel: 'matala 🔋',
+      danceabilityLevel: 'sohvaperuna 🛋️', playlistType: 'Synkkä sielunmaisema 🖤',
+      keyMood: 'pääosin molli 🌙', tempoLabel: 'hidas 🚶',
+    },
+    lyrics: {
+      trackCount: 42, tracksWithLyrics: 38, overallSentiment: -0.42,
+      topThemes: [
+        { theme: 'kipu & sydänsuru', count: 28 },
+        { theme: 'yksinäisyys', count: 22 },
+        { theme: 'rakkaus', count: 15 },
+        { theme: 'nostalgia & muistot', count: 12 },
+        { theme: 'pako & matka', count: 8 },
+      ],
+      totalWords: 12400,
+    },
+    psycho: {
+      headline: 'Sielu on särkynyt, mutta korvien kautta vuotaa kultaa.',
+      emotionalState: 'Soittolistasi on syvä sukellus melankolian ytimeen. Valence-arvo 0.18 on lähes pohjamudissa — tunnetilasi on kuin sateinen marraskuu, joka ei hellitä. Energian 0.25 kertoo että edes sängystä nouseminen on saavutus.',
+      personality: 'Olet äärimmäisen avoin (0.74) ja syvästi introvertti (0.22). Neuroottisuus 0.81 viittaa siihen, että murehdit asioita enemmän kuin olisi tarpeen. Tunnet asiat syvemmin kuin useimmat, ja musiikki on sinulle terapiaa — et viihdettä.',
+      obsessiveThemes: 'Sydänsuru ja yksinäisyys toistuvat pakkomielteisesti. Olet jäänyt kiinni menneisiin tunteisiin kuin kärpänen hämähäkinverkkoon. Joka kolmas biisi käsittelee kipua tavalla tai toisella.',
+      freudianDiagnosis: 'Käytät sublimaatiota — muutat tuskasi taiteeksi (tai ainakin soittolistaksi). Egon puolustusmekanismisi on "musiikki päälle ja tunteet pois" — freudilaisittain terve selviytymiskeino, mutta välttelet todellisuutta.',
+      freudianStage: 'Oraalinen vaihe — etsit lohtua ulkoisista ärsykkeistä (musiikki) täyttääksesi sisäistä tyhjyyttä. Äitisi olisi ylpeä soittolistastasi, mutta toivoisi sinun soittavan hänelle useammin.',
+      recommendation: 'Täydellinen soittolista sateisille illoille, eron jälkeiseen aikaan, ja kaikille jotka nauttivat kauniista surusta.',
+      adjectives: ['melankolinen', 'syvällinen', 'haavoittuva'],
+      insanityRating: 62,
+      playlistRating: 8,
+    },
+    tracks: [
+      { name: 'Someone Like You', artist: 'Adele' },
+      { name: 'The Night We Met', artist: 'Lord Huron' },
+      { name: 'Skinny Love', artist: 'Bon Iver' },
+    ],
+  },
+
+  'mock-party': {
+    meta: {
+      playlistName: 'Bileet 24/7 🎉',
+      playlistDescription: 'Tanssilattialle, nyt ja heti',
+      trackCount: 58, analyzedAt: new Date().toISOString(), totalDurationMs: 13200000,
+    },
+    audio: {
+      averages: {
+        count: 58, acousticness: 0.12, danceability: 0.82, energy: 0.85,
+        instrumentalness: 0.02, liveness: 0.22, loudness: -5.3,
+        speechiness: 0.07, valence: 0.78, tempo: 126, majorKeyRatio: 0.82,
+      },
+    },
+    emotion: { quadrant: 'iloinen 😄', label: 'iloinen', valence: 0.78, energy: 0.85 },
+    bigFive: {
+      openness: 0.52, conscientiousness: 0.38, extraversion: 0.89,
+      agreeableness: 0.64, neuroticism: 0.15,
+      labels: {
+        openness: 'tasapainoinen 🚪', conscientiousness: 'spontaani 🎲',
+        extraversion: 'bile-eläin 🦚', agreeableness: 'diplomaattinen 🤝',
+        neuroticism: 'kylmän rauhallinen 🧊',
+      },
+    },
+    vibe: {
+      primaryMood: 'euforinen ✨', energyLevel: 'korkea 🚀',
+      danceabilityLevel: 'tanssilattialla 💃', playlistType: 'Bilemix 🎉',
+      keyMood: 'pääosin duuri ☀️', tempoLabel: 'nopea 🏎️',
+    },
+    lyrics: {
+      trackCount: 58, tracksWithLyrics: 55, overallSentiment: 0.61,
+      topThemes: [
+        { theme: 'bileet & juhliminen', count: 35 },
+        { theme: 'halu & intohimo', count: 20 },
+        { theme: 'status & menestys', count: 14 },
+        { theme: 'rakkaus', count: 10 },
+      ],
+      totalWords: 18000,
+    },
+    psycho: {
+      headline: 'Et tullut tänne istumaan — tulit tanssimaan koko yön.',
+      emotionalState: 'Valence 0.78 ja energy 0.85 — olet käytännössä onnellisuuspommi. Tämä soittolista huutaa euforiaa ja saa kenet tahansa hyppimään. Et vain kuuntele musiikkia, vaan elät sitä.',
+      personality: 'Ekstraversio 0.89 tekee sinusta bile-eläimen — olet sosiaalinen, energinen ja vedät ihmisiä puoleesi. Neuroottisuus 0.15 on poikkeuksellisen matala: et juuri murehdi, ja se näkyy. Olet spontaani (0.38 tunnollisuus), mikä sopii bailaajaan.',
+      obsessiveThemes: 'Bileet, bailut, juhlat — 60% biiseistä käsittelee juhlimista. Oletko varma ettet kompensoi jotain? Halu ja intohimo ovat vahvasti läsnä — et peittele mitään.',
+      freudianDiagnosis: 'ID ottaa vallan — välitön mielihyvä ja tanssilattia ovat egosi tärkeimmät ajurit. Superego on lähtenyt lomalle. Freud sanoisi että olet terve, mutta toivoisi hieman enemmän itsekontrollia.',
+      freudianStage: 'Fallinen vaihe — huomionhaku, itsetehostus ja "katsokaa minua" -energia hallitsevat. Tanssilattia on näyttämösi.',
+      recommendation: 'Soita tätä kun haluat herättää naapuruston, unohtaa maanantain ja tanssia kuin kukaan ei katsoisi — vaikka kaikki katsovat.',
+      adjectives: ['energinen', 'seurallinen', 'räiskyvä'],
+      insanityRating: 28,
+      playlistRating: 7,
+    },
+    tracks: [
+      { name: 'Uptown Funk', artist: 'Mark Ronson ft. Bruno Mars' },
+      { name: 'Get Lucky', artist: 'Daft Punk' },
+      { name: 'I Gotta Feeling', artist: 'Black Eyed Peas' },
+    ],
+  },
+
+  'mock-hipster': {
+    meta: {
+      playlistName: 'Deep Cuts & Vinyls 📀',
+      playlistDescription: 'Vain oikeat tietäjät kuuntelee näitä',
+      trackCount: 35, analyzedAt: new Date().toISOString(), totalDurationMs: 8400000,
+    },
+    audio: {
+      averages: {
+        count: 35, acousticness: 0.68, danceability: 0.42, energy: 0.38,
+        instrumentalness: 0.55, liveness: 0.18, loudness: -11.8,
+        speechiness: 0.06, valence: 0.44, tempo: 95, majorKeyRatio: 0.45,
+      },
+    },
+    emotion: { quadrant: 'neutraali 😐', label: 'neutraali', valence: 0.44, energy: 0.38 },
+    bigFive: {
+      openness: 0.92, conscientiousness: 0.65, extraversion: 0.35,
+      agreeableness: 0.42, neuroticism: 0.38,
+      labels: {
+        openness: 'äärimmäisen avoin 🌌', conscientiousness: 'järjestelmällinen 📋',
+        extraversion: 'introvertti 🦉', agreeableness: 'kapinallinen 🤘',
+        neuroticism: 'tunteellinen 🌊',
+      },
+    },
+    vibe: {
+      primaryMood: 'seesteinen 🧘', energyLevel: 'kohtalainen ⚡',
+      danceabilityLevel: 'nyökkäilyä 🎵', playlistType: 'Instrumentaali/fokus 🎼',
+      keyMood: 'tasapainossa ⚖️', tempoLabel: 'kohtalainen 🚴',
+    },
+    lyrics: {
+      trackCount: 35, tracksWithLyrics: 18, overallSentiment: 0.05,
+      topThemes: [
+        { theme: 'hengellisyys', count: 10 },
+        { theme: 'yksinäisyys', count: 8 },
+        { theme: 'unelmat & toivo', count: 7 },
+        { theme: 'pako & matka', count: 6 },
+      ],
+      totalWords: 8500,
+    },
+    psycho: {
+      headline: 'Et kuuntele musiikkia — sinä keräilet äänimaisemia.',
+      emotionalState: 'Neutraali valence (0.44) ja matalahko energia (0.38) kertovat kontrolloidusta tunne-elämästä. Et pursua tunteita — vaan suodatat ne. Tämä on soittolista syvälliseen keskittymiseen, ei taustahälyksi.',
+      personality: 'Avoimuus 0.92 on lähes off the charts — olet poikkeuksellisen luova ja älyllisesti utelias. Kapinallinen agreeableness (0.42) kertoo ettet niele valtavirran mielipiteitä. Olet luultavasti se kaveri, joka sanoo "et varmaan ole kuullutkaan tästä bändistä".',
+      obsessiveThemes: 'Hengellisyys ja eksistentiaaliset kysymykset toistuvat. Yksinäisyys ei tunnu kivuliaalta, vaan valitulta tilalta. Soittolistasi on kuin filosofinen tutkielma äänen muodossa.',
+      freudianDiagnosis: 'Intellektualisaatio on puolustusmekanismisi — käsittelet tunteita älyn kautta. Et itke biisin mukana, vaan analysoit sen rakennetta. Superego hallitsee, ID on syrjässä.',
+      freudianStage: 'Latenssivaihe — olet kanavoinut energian älyllisiin harrastuksiin. Seksi ja aggressio eivät kiinnosta; sinua kiinnostaa se限量版 vinyyli-julkaisu vuodelta 1973.',
+      recommendation: 'Täydellinen soittolista vinyylien keräilijälle, kahvinmaistelijalle, ja kaikille jotka tietävät mikä on "B-puolen hidden track".',
+      adjectives: ['älyllinen', 'omaperäinen', 'salaperäinen'],
+      insanityRating: 42,
+      playlistRating: 9,
+    },
+    tracks: [
+      { name: 'Avant Gardener', artist: 'Courtney Barnett' },
+      { name: 'Holocene', artist: 'Bon Iver' },
+      { name: 'Two Weeks', artist: 'FKA twigs' },
+    ],
+  },
+};
+
+// ═══════════════════════════════════════════════════════════
+// APP STATE
+// ═══════════════════════════════════════════════════════════
+
+let currentView = 'landing';
+let spotifyAuthenticated = false;
+let currentReport = null;
+
+const SPOTIFY_API = 'https://api.spotify.com/v1';
+const SPOTIFY_AUTH = 'https://accounts.spotify.com';
+const REDIRECT_URI = window.location.origin + window.location.pathname;
+const SCOPES = 'playlist-read-private playlist-read-collaborative user-read-private user-read-email';
+
+// ═══════════════════════════════════════════════════════════
+// CLIENT ID -hallinta
+// ═══════════════════════════════════════════════════════════
+
+function getClientId() {
+  return localStorage.getItem('spotify_client_id') || '';
+}
+
+function saveClientId() {
+  const input = document.getElementById('clientIdInput');
+  const id = input.value.trim();
+  if (id) {
+    localStorage.setItem('spotify_client_id', id);
+    input.style.borderColor = 'var(--c-success)';
+    setTimeout(() => input.style.borderColor = 'var(--c-surface2)', 2000);
+  }
+}
+
+// Alusta Client ID -kenttä (hoidetaan init():ssä)
+
+// ═══════════════════════════════════════════════════════════
+// SPOTIFY OAuth PKCE (vanilla JS)
+// ═══════════════════════════════════════════════════════════
+
+function generateRandomString(length) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  const arr = new Uint8Array(length);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => chars[b % chars.length]).join('');
+}
+
+async function sha256(plain) {
+  const encoder = new TextEncoder();
+  return crypto.subtle.digest('SHA-256', encoder.encode(plain));
+}
+
+function base64url(buffer) {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function getStoredTokens() {
+  try { return JSON.parse(localStorage.getItem('spotify_tokens')); } catch { return null; }
+}
+
+function saveTokens(tokens) {
+  localStorage.setItem('spotify_tokens', JSON.stringify(tokens));
+}
+
+async function spotifyLogin() {
+  const clientId = getClientId();
+  if (!clientId) {
+    showLandingError('Syötä Spotify Client ID ensin!');
+    return;
+  }
+  const verifier = generateRandomString(64);
+  const challenge = base64url(await sha256(verifier));
+  localStorage.setItem('spotify_code_verifier', verifier);
+
+  // Tallenna soittolistan URL jotta voidaan jatkaa callbackin jälkeen
+  const url = document.getElementById('playlistUrlInput').value.trim();
+  if (url) sessionStorage.setItem('pending_playlist_url', url);
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    redirect_uri: REDIRECT_URI,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    scope: SCOPES,
+  });
+  window.location.href = `${SPOTIFY_AUTH}/authorize?${params}`;
+}
+
+async function handleSpotifyCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const error = params.get('error');
+  if (error) { showLandingError('Kirjautuminen epäonnistui: ' + error); return false; }
+  if (!code) return false;
+
+  const verifier = localStorage.getItem('spotify_code_verifier');
+  if (!verifier) { showLandingError('Kirjautumisvirhe — kokeile uudelleen'); return false; }
+
+  const clientId = getClientId();
+  const res = await fetch(`${SPOTIFY_AUTH}/api/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code', code,
+      redirect_uri: REDIRECT_URI, client_id: clientId,
+      code_verifier: verifier,
+    }),
+  });
+
+  if (!res.ok) { showLandingError('Token-vaihto epäonnistui'); return false; }
+
+  const data = await res.json();
+  saveTokens({
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: Date.now() + data.expires_in * 1000,
+  });
+  localStorage.removeItem('spotify_code_verifier');
+  window.history.replaceState({}, '', REDIRECT_URI);
+  spotifyAuthenticated = true;
+  return true;
+}
+
+async function getValidToken() {
+  const tokens = getStoredTokens();
+  if (!tokens) return null;
+  if (Date.now() < tokens.expires_at) return tokens.access_token;
+
+  // Refresh
+  const clientId = getClientId();
+  const res = await fetch(`${SPOTIFY_AUTH}/api/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: tokens.refresh_token,
+      client_id: clientId,
+    }),
+  });
+  if (!res.ok) { localStorage.removeItem('spotify_tokens'); return null; }
+  const data = await res.json();
+  const newTokens = {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token || tokens.refresh_token,
+    expires_at: Date.now() + data.expires_in * 1000,
+  };
+  saveTokens(newTokens);
+  return newTokens.access_token;
+}
+
+// ═══════════════════════════════════════════════════════════
+// SPOTIFY API (vanilla JS)
+// ═══════════════════════════════════════════════════════════
+
+async function spotifyFetch(path) {
+  const token = await getValidToken();
+  if (!token) return null;
+  const res = await fetch(`${SPOTIFY_API}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) { localStorage.removeItem('spotify_tokens'); return null; }
+  if (!res.ok) return null;
+  return res.json();
+}
+
+function parsePlaylistUrl(url) {
+  const m = url.match(/playlist\/([a-zA-Z0-9]+)/);
+  return m ? m[1] : null;
+}
+
+async function fetchPlaylistMeta(playlistId) {
+  return spotifyFetch(`/playlists/${playlistId}?fields=name,description,images,tracks(total)`);
+}
+
+async function fetchAllPlaylistTracks(playlistId) {
+  const all = [];
+  let url = `/playlists/${playlistId}/tracks?limit=100&fields=items(track(id,name,duration_ms,popularity,artists(name),album(name,images,release_date))),next`;
+  while (url) {
+    const page = await spotifyFetch(url.replace(SPOTIFY_API, ''));
+    if (!page) break;
+    all.push(...page.items.filter(i => i.track));
+    if (!page.next) break;
+    url = page.next;
+  }
+  return all;
+}
+
+async function fetchAudioFeaturesBatch(trackIds) {
+  if (trackIds.length === 0) return [];
+  const ids = trackIds.join(',');
+  const data = await spotifyFetch(`/audio-features?ids=${ids}`);
+  return data?.audio_features?.filter(Boolean) || [];
+}
+
+async function fetchAllAudioFeatures(trackIds) {
+  const all = [];
+  for (let i = 0; i < trackIds.length; i += 100) {
+    const chunk = trackIds.slice(i, i + 100);
+    const features = await fetchAudioFeaturesBatch(chunk);
+    all.push(...features);
+  }
+  return all;
+}
+
+// ═══════════════════════════════════════════════════════════
+// ANALYYSILASKENTA (vanilla JS — portattu audio-profile.ts:stä)
+// ═══════════════════════════════════════════════════════════
+
+function computeAverages(features) {
+  if (!features.length) return null;
+  const n = features.length;
+  const sum = fn => features.reduce((s, f) => s + fn(f), 0);
+  const major = features.filter(f => f.mode === 1).length;
+  return {
+    count: n,
+    acousticness: sum(f => f.acousticness) / n,
+    danceability: sum(f => f.danceability) / n,
+    energy: sum(f => f.energy) / n,
+    instrumentalness: sum(f => f.instrumentalness) / n,
+    liveness: sum(f => f.liveness) / n,
+    loudness: sum(f => f.loudness) / n,
+    speechiness: sum(f => f.speechiness) / n,
+    valence: sum(f => f.valence) / n,
+    tempo: sum(f => f.tempo) / n,
+    majorKeyRatio: major / n,
+  };
+}
+
+function mapToCircumplex(avg) {
+  const { valence, energy } = avg;
+  let quadrant;
+  if (valence >= 0.55 && energy >= 0.55) quadrant = 'iloinen 😄';
+  else if (valence < 0.45 && energy >= 0.55) quadrant = 'vihainen 😤';
+  else if (valence < 0.45 && energy < 0.45) quadrant = 'surullinen 😢';
+  else if (valence >= 0.55 && energy < 0.45) quadrant = 'rentoutunut 😌';
+  else quadrant = 'neutraali 😐';
+  return { quadrant, label: quadrant.replace(/ .*/, ''), valence, energy };
+}
+
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+function estimateBigFive(avg) {
+  const { energy, danceability, valence, acousticness, instrumentalness, majorKeyRatio, speechiness } = avg;
+  const openness = clamp(acousticness * 0.4 + instrumentalness * 0.3 + (1 - danceability) * 0.3, 0, 1);
+  const conscientiousness = clamp(majorKeyRatio * 0.3 + danceability * 0.4 + energy * 0.3, 0, 1);
+  const extraversion = clamp(energy * 0.5 + danceability * 0.3 + valence * 0.2, 0, 1);
+  const agreeableness = clamp(valence * 0.5 + majorKeyRatio * 0.3 + (1 - speechiness) * 0.2, 0, 1);
+  const neuroticism = clamp((1 - valence) * 0.4 + (1 - majorKeyRatio) * 0.3 + (1 - danceability) * 0.3, 0, 1);
+
+  const lt = (v, lo, mi, hi) => v < 0.35 ? lo : v > 0.65 ? hi : mi;
+  const le = v => v < 0.3 ? 'introvertti 🦉' : v < 0.5 ? 'ambivertti 🦊' : v < 0.7 ? 'ekstrovertti 🦜' : 'bile-eläin 🦚';
+
+  return {
+    openness, conscientiousness, extraversion, agreeableness, neuroticism,
+    labels: {
+      openness: lt(openness, 'sulkeutunut 🏠', 'tasapainoinen 🚪', 'äärimmäisen avoin 🌌'),
+      conscientiousness: lt(conscientiousness, 'spontaani 🎲', 'järjestelmällinen 📋', 'pakkomielteinen 📐'),
+      extraversion: le(extraversion),
+      agreeableness: lt(agreeableness, 'kapinallinen 🤘', 'diplomaattinen 🤝', 'miellyttäjä 🥺'),
+      neuroticism: lt(neuroticism, 'kylmän rauhallinen 🧊', 'tunteellinen 🌊', 'hermoromahduksen partaalla 💥'),
+    },
+  };
+}
+
+function describeVibe(avg) {
+  const md = (v, e) =>
+    v > 0.7 && e > 0.7 ? 'euforinen ✨' : v > 0.6 && e > 0.5 ? 'iloinen 🌞' :
+    v > 0.5 && e < 0.4 ? 'seesteinen 🧘' : v < 0.3 && e > 0.7 ? 'aggressiivinen 🔥' :
+    v < 0.3 && e < 0.3 ? 'melankolinen 🥀' : v < 0.4 && e > 0.5 ? 'levoton 🌪️' :
+    v > 0.5 && e < 0.5 ? 'rentoutunut 😌' : 'tasapainoinen ⚖️';
+
+  const cp = () => {
+    if (avg.energy > 0.7 && avg.danceability > 0.6) return 'Bilemix 🎉';
+    if (avg.acousticness > 0.6 && avg.energy < 0.4) return 'Akustinen ilta 🕯️';
+    if (avg.instrumentalness > 0.5) return 'Instrumentaali/fokus 🎼';
+    if (avg.speechiness > 0.3) return 'Lyriikkapainotteinen 📝';
+    if (avg.valence < 0.3) return 'Synkkä sielunmaisema 🖤';
+    if (avg.energy > 0.6 && avg.valence > 0.5) return 'Feel-good 🇫🇮';
+    if (avg.tempo > 130) return 'Nopeatempoinen 🏃';
+    return 'Eklektinen sekoitus 🎨';
+  };
+
+  const tl = b => b < 60 ? 'erittäin hidas 🐢' : b < 80 ? 'hidas 🚶' : b < 100 ? 'kohtalainen 🚴' : b < 120 ? 'reipas 🏃' : b < 140 ? 'nopea 🏎️' : 'äärimmäisen nopea ⚡';
+  const el = e => e > 0.65 ? 'korkea 🚀' : e > 0.35 ? 'kohtalainen ⚡' : 'matala 🔋';
+  const dl = d => d > 0.65 ? 'tanssilattialla 💃' : d > 0.35 ? 'nyökkäilyä 🎵' : 'sohvaperuna 🛋️';
+  const km = m => m > 0.65 ? 'pääosin duuri ☀️' : m < 0.35 ? 'pääosin molli 🌙' : 'tasapainossa ⚖️';
+
+  return {
+    primaryMood: md(avg.valence, avg.energy),
+    energyLevel: el(avg.energy),
+    danceabilityLevel: dl(avg.danceability),
+    playlistType: cp(),
+    keyMood: km(avg.majorKeyRatio),
+    tempoLabel: tl(avg.tempo),
+  };
+}
+
+function generatePsychoText(avg, emotion, bigFive, vibe, playlistName, trackCount) {
+  const v = avg.valence, e = avg.energy;
+  const ir = Math.round(clamp(((1 - v) * 0.4 + (1 - (e > 0.5 ? e : 0.5)) * 0.3 + bigFive.neuroticism * 0.3) * 100, 5, 95));
+  const rating = Math.round(clamp((v * 0.3 + e * 0.2 + bigFive.openness * 0.2 + 0.5) * 10, 3, 10));
+
+  const moodTexts = {
+    'surullinen': {
+      emotional: `Soittolistasi on syvä sukellus melankoliaan. Valence ${pct(v)} on lähes pohjassa — tunnetilasi on kuin sateinen marraskuu. Energian ${pct(e)} kertoo että edes sohvalta nouseminen vaatii ponnistelua.`,
+      personality: `Olet ${bigFive.labels.openness} (${pct(bigFive.openness)}) ja ${bigFive.labels.extraversion} (${pct(bigFive.extraversion)}). Neuroottisuus ${pct(bigFive.neuroticism)} viittaa siihen, että tunnet asiat syvemmin kuin useimmat — musiikki on terapiaasi.`,
+      obsessive: `Sydänsuru ja yksinäisyys toistuvat pakkomielteisesti. Olet jäänyt kiinni menneisiin tunteisiin — ${pct(1 - v)} negatiivisuus ei valehtele.`,
+      freudian: `Sublimaatio on puolustusmekanismisi — muutat tuskasi soittolistaksi. Ego suojaa itseään musiikilla.`,
+      stage: `Oraalinen vaihe — etsit lohtua ulkoisista ärsykkeistä (musiikki) täyttääksesi sisäistä tyhjyyttä.`,
+      rec: `Täydellinen soittolista sateisille illoille, eron jälkeiseen aikaan, ja kaikille jotka nauttivat kauniista surusta.`,
+      adj: ['melankolinen', 'syvällinen', 'haavoittuva'],
+    },
+    'iloinen': {
+      emotional: `Valence ${pct(v)} ja energy ${pct(e)} — olet käytännössä onnellisuuspommi. Tämä soittolista huutaa euforiaa ja saa kenet tahansa hyppimään.`,
+      personality: `${bigFive.labels.extraversion} (${pct(bigFive.extraversion)}) tekee sinusta seurallisen energiapakkauksen. Neuroottisuus ${pct(bigFive.neuroticism)} on matala: et murehdi turhia.`,
+      obsessive: `Bileet ja juhliminen dominoivat — ${pct(e)} energiasta päätellen et pysähdy. Oletko varma ettet kompensoi jotain?`,
+      freudian: `ID ottaa vallan — välitön mielihyvä ja tanssilattia ajavat egoasi. Superego on lomalla.`,
+      stage: `Fallinen vaihe — huomionhaku ja itsetehostus hallitsevat. Tanssilattia on näyttämösi.`,
+      rec: `Soita tätä kun haluat herättää naapuruston ja tanssia kuin kukaan ei katsoisi.`,
+      adj: ['energinen', 'seurallinen', 'räiskyvä'],
+    },
+    'vihainen': {
+      emotional: `Korkea energia (${pct(e)}) mutta matala valence (${pct(v)}) — olet vihainen etkä peittele sitä. Soittolistasi on kuin nyrkki seinään.`,
+      personality: `Kapinallinen ja intensiivinen. ${bigFive.labels.agreeableness} (${pct(bigFive.agreeableness)}) — et niele paskaa keneltäkään.`,
+      obsessive: `Viha, kapina ja taistelu toistuvat. Jokin tai joku on saanut sinut raivostumaan — ja purat sen musiikkiin.`,
+      freudian: `Aggression kanavointi on tervettä — parempi soittolista kuin nyrkkitappelu. Thanatos (kuolemanvietti) on vahvasti läsnä.`,
+      stage: `Anaalisadistinen vaihe — kontrollin tarve ja kapina auktoriteetteja vastaan.`,
+      rec: `Soita tätä ennen kuin menet punttikselle — tai exän ovelle.`,
+      adj: ['intensiivinen', 'kapinallinen', 'räjähtävä'],
+    },
+    'rentoutunut': {
+      emotional: `Positiivinen valence (${pct(v)}) mutta matala energia (${pct(e)}) — olet tyyni kuin kesäjärven pinta. Soittolistasi hengittää rauhallisesti.`,
+      personality: `${bigFive.labels.openness} (${pct(bigFive.openness)}) — arvostat harmoniaa ja kauneutta. Et tarvitse kaaosta ollaksesi onnellinen.`,
+      obsessive: `Rauha ja harmonia toistuvat. Välttelet konflikteja — ehkä liikaakin?`,
+      freudian: `Ego on vahvasti tasapainossa ID:n ja Superegon välillä. Harvinaisen tervettä — Freud olisi vaikuttunut.`,
+      stage: `Genitaalinen vaihe — olet saavuttanut kypsän tasapainon. Onnittelut.`,
+      rec: `Täydellinen soittolista aamukahville, joogaan, ja sunnuntaibrunssille.`,
+      adj: ['seesteinen', 'tasapainoinen', 'lämmin'],
+    },
+  };
+
+  const baseKey = emotion.label.toLowerCase();
+  const template = moodTexts[baseKey] || moodTexts['surullinen'];
+
+  return {
+    headline: `${playlistName} — ${emotion.quadrant.split(' ')[0]} sielunmaisema.`,
+    emotionalState: template.emotional,
+    personality: template.personality,
+    obsessiveThemes: template.obsessive,
+    freudianDiagnosis: template.freudian,
+    freudianStage: template.stage,
+    recommendation: template.rec,
+    adjectives: template.adj,
+    insanityRating: ir,
+    playlistRating: rating,
+  };
+}
+
+function pct(v) { return Math.round(v * 100) + '%'; }
+
+// ═══════════════════════════════════════════════════════════
+// VIEW NAVIGATION
+// ═══════════════════════════════════════════════════════════
+
+function showView(viewId) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const view = document.getElementById('view-' + viewId);
+  if (view) view.classList.add('active');
+  currentView = viewId;
+  document.getElementById('btnReset').style.display = (viewId === 'report') ? '' : 'none';
+}
+
+function showLandingError(msg) {
+  const el = document.getElementById('landingError');
+  el.style.display = 'block';
+  el.innerHTML = `<div class="report-section" style="border-left:3px solid var(--c-danger);color:var(--c-danger)">⚠️ ${msg}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// FLOW: OIKEA ANALYYSI (Spotify API)
+// ═══════════════════════════════════════════════════════════
+
+async function startRealAnalysis() {
+  document.getElementById('landingError').style.display = 'none';
+  const clientId = getClientId();
+  if (!clientId) {
+    showLandingError('Syötä Spotify Client ID ensin! <a href="https://developer.spotify.com/dashboard" target="_blank" style="color:var(--c-accent)">Luo sellainen täällä</a>');
+    return;
+  }
+
+  const url = document.getElementById('playlistUrlInput').value.trim();
+  const playlistId = parsePlaylistUrl(url);
+  if (!playlistId) {
+    showLandingError('Syötä kelvollinen Spotify-soittolistan URL (esim. https://open.spotify.com/playlist/...)');
+    return;
+  }
+
+  // Tarkista onko token voimassa
+  const hasToken = await getValidToken();
+  if (!hasToken) {
+    // Aloita OAuth flow
+    await spotifyLogin();
+    return;
+  }
+
+  // Hae data ja analysoi
+  showView('loading');
+  await runSpotifyAnalysis(playlistId);
+}
+
+async function runSpotifyAnalysis(playlistId) {
+  const status = document.getElementById('loadingStatus');
+
+  try {
+    status.textContent = 'Haetaan soittolistan metadataa...';
+    const meta = await fetchPlaylistMeta(playlistId);
+    if (!meta) throw new Error('Soittolistaa ei löytynyt. Onko se julkinen tai kirjautunut?');
+
+    status.textContent = `Haetaan biisejä... (${meta.tracks.total} kpl)`;
+    const tracks = await fetchAllPlaylistTracks(playlistId);
+    if (!tracks.length) throw new Error('Soittolistalla ei ole biisejä.');
+
+    status.textContent = `Haetaan audio-featureita ${tracks.length} biisille...`;
+    const trackIds = tracks.map(t => t.track.id);
+    const features = await fetchAllAudioFeatures(trackIds);
+
+    status.textContent = 'Lasketaan analyysiä...';
+    const averages = computeAverages(features);
+    if (!averages) throw new Error('Audio-featureita ei saatu laskettua.');
+
+    const emotion = mapToCircumplex(averages);
+    const bigFive = estimateBigFive(averages);
+    const vibe = describeVibe(averages);
+
+    const trackList = tracks.slice(0, 20).map(t => ({
+      name: t.track.name,
+      artist: t.track.artists.map(a => a.name).join(', '),
+    }));
+
+    const psycho = generatePsychoText(averages, emotion, bigFive, vibe, meta.name, tracks.length);
+
+    const report = {
+      meta: {
+        playlistName: meta.name,
+        playlistDescription: meta.description || '',
+        playlistImage: meta.images?.[0]?.url || null,
+        trackCount: tracks.length,
+        analyzedAt: new Date().toISOString(),
+        totalDurationMs: tracks.reduce((s, t) => s + (t.track?.duration_ms || 0), 0),
+      },
+      audio: { averages },
+      emotion,
+      bigFive,
+      vibe,
+      lyrics: null,
+      psycho,
+      tracks: trackList,
+    };
+
+    currentReport = report;
+    renderReport(report, false);
+    showView('report');
+    document.getElementById('btnReset').style.display = '';
+  } catch (err) {
+    showView('landing');
+    showLandingError('❌ ' + err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// FLOW: ANALYZE
+// ═══════════════════════════════════════════════════════════
+
+function loadMockAnalysis() {
+  const ids = Object.keys(MOCK_ANALYSES);
+  const randomId = ids[Math.floor(Math.random() * ids.length)];
+  showMockAnalysis(randomId);
+}
+
+async function showMockAnalysis(playlistId) {
+  showView('loading');
+  document.getElementById('loadingStatus').textContent = 'Psyko miettii...';
+  await sleep(800);
+  const report = MOCK_ANALYSES[playlistId];
+  if (!report) { showView('landing'); return; }
+  currentReport = report;
+  renderReport(report, true);
+  showView('report');
+  document.getElementById('btnReset').style.display = '';
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER REPORT
+// ═══════════════════════════════════════════════════════════
+
+function renderReport(report, isMock = false) {
+  const p = report.psycho;
+  const e = report.emotion;
+  const b = report.bigFive;
+  const v = report.vibe;
+  const l = report.lyrics;
+
+  const content = document.getElementById('reportContent');
+  content.innerHTML = `
+    <!-- Headline -->
+    <div class="report-section" style="text-align:center">
+      <div class="profile-card">
+        <div class="avatar">${e.quadrant.split(' ')[1] || '🎧'}</div>
+        <div class="headline">${p.headline}</div>
+        <div class="emotion-badge">${e.quadrant}</div>
+      </div>
+    </div>
+
+    <!-- Insanity Meter -->
+    <div class="report-section">
+      <h2>🧠 Kuinka hullu olet?</h2>
+      <div class="insanity-meter">
+        <span style="font-size:2rem">${p.insanityRating < 30 ? '😊' : p.insanityRating < 60 ? '🤔' : '💀'}</span>
+        <div class="insanity-bar">
+          <div class="insanity-fill" style="width:${p.insanityRating}%"></div>
+        </div>
+        <div class="insanity-value">${p.insanityRating}/100</div>
+      </div>
+      <p style="color:var(--c-text2);font-size:0.8rem;text-align:center">
+        ${p.insanityRating < 30 ? 'Ihan tervejärkinen. Liiankin ehkä?' :
+          p.insanityRating < 50 ? 'Pientä omituisuutta havaittavissa.' :
+          p.insanityRating < 70 ? 'Terapiaa suositellaan lämpimästi.' :
+          'Soittolistasi on todistusaineisto. Soita äidillesi.'}
+      </p>
+    </div>
+
+    <!-- Emotional State -->
+    <div class="report-section">
+      <h2>🎭 Tunnetila-analyysi</h2>
+      <p>${p.emotionalState}</p>
+      <div style="display:flex;gap:1rem;margin-top:1rem;flex-wrap:wrap">
+        <div style="flex:1;min-width:120px;background:var(--c-surface2);padding:0.75rem;border-radius:var(--radius);text-align:center">
+          <div style="color:var(--c-text2);font-size:0.75rem">Valence (positiivisuus)</div>
+          <div style="font-size:1.5rem;font-weight:700">${Math.round(report.audio.averages.valence * 100)}%</div>
+        </div>
+        <div style="flex:1;min-width:120px;background:var(--c-surface2);padding:0.75rem;border-radius:var(--radius);text-align:center">
+          <div style="color:var(--c-text2);font-size:0.75rem">Energy (energisyys)</div>
+          <div style="font-size:1.5rem;font-weight:700">${Math.round(report.audio.averages.energy * 100)}%</div>
+        </div>
+        <div style="flex:1;min-width:120px;background:var(--c-surface2);padding:0.75rem;border-radius:var(--radius);text-align:center">
+          <div style="color:var(--c-text2);font-size:0.75rem">Tempo</div>
+          <div style="font-size:1.5rem;font-weight:700">${Math.round(report.audio.averages.tempo)} BPM</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Big Five -->
+    <div class="report-section">
+      <h2>🧬 Big Five -persoonallisuus</h2>
+      <div class="big-five">
+        ${renderBigFiveBar('Avoimuus', b.openness, b.labels.openness, '🌌')}
+        ${renderBigFiveBar('Tunnollisuus', b.conscientiousness, b.labels.conscientiousness, '📋')}
+        ${renderBigFiveBar('Ekstraversio', b.extraversion, b.labels.extraversion, '🦜')}
+        ${renderBigFiveBar('Sovinnollisuus', b.agreeableness, b.labels.agreeableness, '🤝')}
+        ${renderBigFiveBar('Neuroottisuus', b.neuroticism, b.labels.neuroticism, '🌊')}
+      </div>
+    </div>
+
+    <!-- Personality Text -->
+    <div class="report-section">
+      <h2>📝 Persoonallisuusanalyysi</h2>
+      <p>${p.personality}</p>
+    </div>
+
+    <!-- Obsessive Themes -->
+    <div class="report-section">
+      <h2>🔄 Toistuvat teemat & pakkomielteet</h2>
+      <p>${p.obsessiveThemes}</p>
+      ${l ? `
+        <div style="margin-top:0.75rem;display:flex;flex-wrap:wrap;gap:0.4rem">
+          ${l.topThemes.map(t => `
+            <span style="padding:0.3rem 0.8rem;background:var(--c-surface2);border-radius:100px;font-size:0.8rem">
+              ${t.theme} <strong>${t.count}×</strong>
+            </span>
+          `).join('')}
+        </div>
+      ` : ''}
+    </div>
+
+    <!-- Freud -->
+    <div class="report-section" style="border-left:3px solid var(--c-accent2)">
+      <h2>🛋️ Freudilainen diagnoosi</h2>
+      <p>${p.freudianDiagnosis}</p>
+      <p style="margin-top:0.5rem;font-weight:600">📌 ${p.freudianStage}</p>
+    </div>
+
+    <!-- Vibe -->
+    <div class="report-section">
+      <h2>🎵 Vibe-yhteenveto</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.5rem">
+        ${renderVibeItem('Päätunnelma', v.primaryMood)}
+        ${renderVibeItem('Energia', v.energyLevel)}
+        ${renderVibeItem('Tanssittavuus', v.danceabilityLevel)}
+        ${renderVibeItem('Sävellaji', v.keyMood)}
+        ${renderVibeItem('Soittolistan tyyppi', v.playlistType)}
+        ${renderVibeItem('Tempo', v.tempoLabel)}
+      </div>
+    </div>
+
+    <!-- Adjectives -->
+    <div class="report-section">
+      <h2>🏷️ Kolme sanaa, jotka kuvaavat sinua</h2>
+      <div class="adjectives">
+        ${p.adjectives.map(a => `<span class="adj-tag">${a}</span>`).join('')}
+      </div>
+    </div>
+
+    <!-- Recommendation & Rating -->
+    <div class="report-section">
+      <h2>⭐ Arvio & suositus</h2>
+      <div class="stars">${'★'.repeat(Math.round(p.playlistRating))}${'☆'.repeat(10 - Math.round(p.playlistRating))} <span style="color:var(--c-text2);font-size:0.9rem">${p.playlistRating}/10</span></div>
+      <p style="margin-top:0.5rem">${p.recommendation}</p>
+    </div>
+
+    <!-- Data notice -->
+    <div style="text-align:center;padding:1rem;color:var(--c-text2);font-size:0.75rem">
+      ${isMock
+        ? '🧪 Tämä on mock-dataa. Oikea analyysi vaatii Spotify-kirjautumisen.'
+        : `🎧 Analysoitu oikeasta Spotify-datasta — ${report.meta.trackCount} biisiä, ${report.meta.analyzedAt ? new Date(report.meta.analyzedAt).toLocaleString('fi-FI') : ''}`
+      }
+    </div>
+  `;
+}
+
+function renderBigFiveBar(name, value, desc, emoji) {
+  return `
+    <div class="trait-row">
+      <span class="trait-label">${emoji} ${name}</span>
+      <div class="trait-bar-wrap">
+        <div class="trait-bar" style="width:${value * 100}%"></div>
+      </div>
+      <span style="font-weight:600;width:30px;text-align:right">${Math.round(value * 100)}</span>
+      <span class="trait-desc">${desc}</span>
+    </div>
+  `;
+}
+
+function renderVibeItem(label, value) {
+  return `
+    <div style="background:var(--c-surface2);padding:0.6rem;border-radius:var(--radius)">
+      <div style="color:var(--c-text2);font-size:0.7rem">${label}</div>
+      <div style="font-weight:600;font-size:0.9rem">${value}</div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════════════
+
+function resetApp() {
+  currentReport = null;
+  showView('landing');
+}
+
+function logout() {
+  spotifyAuthenticated = false;
+  document.getElementById('btnLogout').style.display = 'none';
+  resetApp();
+}
+
+// ═══════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT — käsittele Spotify callback ja alusta UI
+// ═══════════════════════════════════════════════════════════
+
+async function init() {
+  // Palauta tallennettu Client ID
+  const saved = getClientId();
+  if (saved) document.getElementById('clientIdInput').value = saved;
+
+  // Tarkista onko paluu Spotify-authista (?code=...)
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('code')) {
+    const ok = await handleSpotifyCallback();
+    if (ok) {
+      // Jatka analyysiä — hae playlist ID URL:sta jos tallessa
+      const pendingUrl = sessionStorage.getItem('pending_playlist_url');
+      if (pendingUrl) {
+        sessionStorage.removeItem('pending_playlist_url');
+        document.getElementById('playlistUrlInput').value = pendingUrl;
+        const playlistId = parsePlaylistUrl(pendingUrl);
+        if (playlistId) {
+          showView('loading');
+          await runSpotifyAnalysis(playlistId);
+          return;
+        }
+      }
+      // Ei pending URL:ia — näytä landing
+      document.getElementById('landingError').style.display = 'block';
+      document.getElementById('landingError').innerHTML =
+        '<div class="report-section" style="border-left:3px solid var(--c-success);color:var(--c-success)">✅ Kirjautuminen onnistui! Syötä soittolistan URL ja klikkaa "Analysoi soittolista".</div>';
+    }
+  }
+}
+
+init();
+
+console.log('🎧 Psyko valmiina. "Mitä soittolistasi kertoo sinusta?"');
+console.log('💡 Syötä Spotify Client ID + soittolistan URL → "Analysoi soittolista"');
+console.log('💡 Tai kokeile: loadMockAnalysis()');
+</script>
+
+</body>
+</html>

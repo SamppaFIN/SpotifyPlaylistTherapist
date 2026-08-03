@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+dist/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/settings.json
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage/
+test-results/
+playwright-report/
+
+# Build
+*.tsbuildinfo
+
+# Spotify cache
+.spotify-cache/
