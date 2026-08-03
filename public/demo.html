@@ -623,28 +623,42 @@ async function handleSpotifyCallback() {
 async function getValidToken(forceRefresh = false) {
   const tokens = getStoredTokens();
   if (!tokens) return null;
-  if (!forceRefresh && Date.now() < tokens.expires_at) return tokens.access_token;
 
-  // Refresh
+  // Jos token on voimassa eikä pakoteta refreshiä, palauta suoraan
+  if (!forceRefresh && Date.now() < tokens.expires_at) {
+    return tokens.access_token;
+  }
+
+  // Yritä refreshata
+  console.log('🔄 Refreshaan Spotify-tokenia...');
   const clientId = getClientId();
-  const res = await fetch(`${SPOTIFY_AUTH}/api/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token: tokens.refresh_token,
-      client_id: clientId,
-    }),
-  });
-  if (!res.ok) { localStorage.removeItem('spotify_tokens'); return null; }
-  const data = await res.json();
-  const newTokens = {
-    access_token: data.access_token,
-    refresh_token: data.refresh_token || tokens.refresh_token,
-    expires_at: Date.now() + (data.expires_in || 3600) * 1000,
-  };
-  saveTokens(newTokens);
-  return newTokens.access_token;
+  try {
+    const res = await fetch(`${SPOTIFY_AUTH}/api/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: tokens.refresh_token,
+        client_id: clientId,
+      }),
+    });
+    if (!res.ok) {
+      console.warn('⚠️ Tokenin refresh epäonnistui:', res.status);
+      return null; // ÄLÄ poista tokenia — ehkä verkkovirhe
+    }
+    const data = await res.json();
+    const newTokens = {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token || tokens.refresh_token,
+      expires_at: Date.now() + (data.expires_in || 3600) * 1000,
+    };
+    saveTokens(newTokens);
+    console.log('✅ Token refreshed');
+    return newTokens.access_token;
+  } catch (err) {
+    console.warn('⚠️ Verkkovirhe token-refreshissä:', err);
+    return null; // ÄLÄ poista — voi olla tilapäinen
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -654,22 +668,30 @@ async function getValidToken(forceRefresh = false) {
 async function spotifyFetch(path, retry = true) {
   const token = await getValidToken();
   if (!token) return null;
+
   const res = await fetch(`${SPOTIFY_API}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+
   // 401 → token mitätöity, pakota refresh ja yritä uudelleen
   if (res.status === 401 && retry) {
-    const newToken = await getValidToken(true); // force refresh
+    console.log('🔄 401 — pakotetaan token-refresh...');
+    const newToken = await getValidToken(true);
     if (newToken) {
       const retryRes = await fetch(`${SPOTIFY_API}${path}`, {
         headers: { Authorization: `Bearer ${newToken}` },
       });
       if (retryRes.ok) return retryRes.json();
+      console.warn('⚠️ Refresh auttoi, mutta API-kutsu epäonnistui silti:', retryRes.status);
     }
-    localStorage.removeItem('spotify_tokens');
+    // ÄLÄ poista tokenia — käyttäjä voi kirjautua uudelleen
     return null;
   }
-  if (!res.ok) return null;
+
+  if (!res.ok) {
+    console.warn(`⚠️ Spotify API ${res.status}: ${path}`);
+    return null;
+  }
   return res.json();
 }
 
@@ -979,7 +1001,14 @@ async function runSpotifyAnalysis(playlistId) {
     document.getElementById('btnReset').style.display = '';
   } catch (err) {
     showView('landing');
-    showLandingError('❌ ' + err.message);
+    const msg = err.message || String(err);
+    // Tunnista auth-ongelmat
+    if (msg.includes('401') || msg.includes('token') || msg.includes('kirjautunut')) {
+      showLandingError('🔐 Token vanhentunut. Klikkaa "Kirjaudu Spotifyhin" uudelleen.');
+      updateLoginStatus();
+    } else {
+      showLandingError('❌ ' + msg);
+    }
   }
 }
 
@@ -1175,8 +1204,11 @@ function resetApp() {
 }
 
 function logout() {
+  localStorage.removeItem('spotify_tokens');
+  localStorage.removeItem('spotify_profile');
+  sessionStorage.removeItem('pending_playlist_url');
   spotifyAuthenticated = false;
-  document.getElementById('btnLogout').style.display = 'none';
+  updateLoginStatus();
   resetApp();
 }
 
@@ -1231,12 +1263,24 @@ async function init() {
 }
 
 async function updateLoginStatus() {
-  const hasToken = await getValidToken();
+  const tokens = getStoredTokens();
   const statusEl = document.getElementById('spotifyStatus');
   const statusText = document.getElementById('spotifyStatusText');
-  if (hasToken && statusEl) {
+  const btnLogout = document.getElementById('btnLogout');
+
+  if (tokens && statusEl) {
+    // Tokenit olemassa — näytä kirjautuneena
     statusEl.innerHTML = '<span style="color:var(--c-success);font-weight:600">✅ Kirjautunut Spotifyhin</span>';
     statusText.textContent = 'Olet kirjautunut — nyt voit analysoida soittolistasi.';
+    if (btnLogout) btnLogout.style.display = '';
+  } else {
+    if (statusEl) {
+      statusEl.innerHTML = '<button class="btn btn-primary" onclick="spotifyLoginOnly()">🎵 Kirjaudu Spotifyhin</button>';
+    }
+    if (statusText) {
+      statusText.textContent = 'Kirjaudu ensin, jotta näemme soittolistasi.';
+    }
+    if (btnLogout) btnLogout.style.display = 'none';
   }
 }
 
