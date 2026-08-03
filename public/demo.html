@@ -575,6 +575,7 @@ async function spotifyLogin() {
     code_challenge_method: 'S256',
     code_challenge: challenge,
     scope: SCOPES,
+    show_dialog: 'true',
   });
   window.location.href = `${SPOTIFY_AUTH}/authorize?${params}`;
 }
@@ -613,7 +614,9 @@ async function handleSpotifyCallback() {
     access_token: data.access_token,
     refresh_token: data.refresh_token,
     expires_at: Date.now() + data.expires_in * 1000,
+    scope: data.scope || '',
   });
+  console.log('✅ Token tallennettu, scopet:', data.scope);
   localStorage.removeItem('spotify_code_verifier');
   window.history.replaceState({}, '', REDIRECT_URI);
   spotifyAuthenticated = true;
