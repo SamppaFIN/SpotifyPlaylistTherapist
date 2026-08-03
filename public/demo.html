@@ -620,10 +620,10 @@ async function handleSpotifyCallback() {
   return true;
 }
 
-async function getValidToken() {
+async function getValidToken(forceRefresh = false) {
   const tokens = getStoredTokens();
   if (!tokens) return null;
-  if (Date.now() < tokens.expires_at) return tokens.access_token;
+  if (!forceRefresh && Date.now() < tokens.expires_at) return tokens.access_token;
 
   // Refresh
   const clientId = getClientId();
@@ -641,7 +641,7 @@ async function getValidToken() {
   const newTokens = {
     access_token: data.access_token,
     refresh_token: data.refresh_token || tokens.refresh_token,
-    expires_at: Date.now() + data.expires_in * 1000,
+    expires_at: Date.now() + (data.expires_in || 3600) * 1000,
   };
   saveTokens(newTokens);
   return newTokens.access_token;
@@ -651,13 +651,24 @@ async function getValidToken() {
 // SPOTIFY API (vanilla JS)
 // ═══════════════════════════════════════════════════════════
 
-async function spotifyFetch(path) {
+async function spotifyFetch(path, retry = true) {
   const token = await getValidToken();
   if (!token) return null;
   const res = await fetch(`${SPOTIFY_API}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (res.status === 401) { localStorage.removeItem('spotify_tokens'); return null; }
+  // 401 → token mitätöity, pakota refresh ja yritä uudelleen
+  if (res.status === 401 && retry) {
+    const newToken = await getValidToken(true); // force refresh
+    if (newToken) {
+      const retryRes = await fetch(`${SPOTIFY_API}${path}`, {
+        headers: { Authorization: `Bearer ${newToken}` },
+      });
+      if (retryRes.ok) return retryRes.json();
+    }
+    localStorage.removeItem('spotify_tokens');
+    return null;
+  }
   if (!res.ok) return null;
   return res.json();
 }
