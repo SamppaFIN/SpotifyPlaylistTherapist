@@ -668,7 +668,7 @@ function parsePlaylistUrl(url) {
 }
 
 async function fetchPlaylistMeta(playlistId) {
-  return spotifyFetch(`/playlists/${playlistId}?fields=name,description,images,tracks(total)`);
+  return spotifyFetch(`/playlists/${playlistId}?fields=name,description,images,tracks.total`);
 }
 
 async function fetchAllPlaylistTracks(playlistId) {
@@ -915,9 +915,15 @@ async function runSpotifyAnalysis(playlistId) {
     const meta = await fetchPlaylistMeta(playlistId);
     if (!meta) throw new Error('Soittolistaa ei löytynyt. Onko se julkinen tai kirjautunut?');
 
-    status.textContent = `Haetaan biisejä... (${meta.tracks.total} kpl)`;
+    const totalTracks = meta.tracks?.total || 0;
+    status.textContent = `Haetaan biisejä... (${totalTracks} kpl)`;
     const tracks = await fetchAllPlaylistTracks(playlistId);
-    if (!tracks.length) throw new Error('Soittolistalla ei ole biisejä.');
+    if (!tracks.length) {
+      const fullMeta = await spotifyFetch(`/playlists/${playlistId}`);
+      const fullTotal = fullMeta?.tracks?.total || 0;
+      if (fullTotal > 0) throw new Error(`Soittolistalla on ${fullTotal} biisiä, mutta haku epäonnistui. Kokeile uudelleen.`);
+      throw new Error('Soittolistalla ei ole biisejä tai haku epäonnistui.');
+    }
 
     status.textContent = `Haetaan audio-featureita ${tracks.length} biisille...`;
     const trackIds = tracks.map(t => t.track.id);
