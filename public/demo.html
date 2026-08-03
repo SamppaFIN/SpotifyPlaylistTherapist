@@ -701,19 +701,28 @@ function parsePlaylistUrl(url) {
 }
 
 async function fetchPlaylistMeta(playlistId) {
-  return spotifyFetch(`/playlists/${playlistId}?fields=name,description,images,tracks.total`);
+  console.log('📋 Haetaan soittolistan metadata:', playlistId);
+  const data = await spotifyFetch(`/playlists/${playlistId}`);
+  console.log('📋 Meta vastaus:', data ? `${data.name} — ${data.tracks?.total} biisiä` : 'NULL');
+  return data;
 }
 
 async function fetchAllPlaylistTracks(playlistId) {
   const all = [];
-  let url = `/playlists/${playlistId}/tracks?limit=100&fields=items(track(id,name,duration_ms,popularity,artists(name),album(name,images,release_date))),next`;
+  let url = `/playlists/${playlistId}/tracks?limit=100`;
+  let pageNum = 0;
   while (url) {
+    pageNum++;
+    console.log(`📋 Haetaan tracks sivu ${pageNum}:`, url);
     const page = await spotifyFetch(url.replace(SPOTIFY_API, ''));
-    if (!page) break;
-    all.push(...page.items.filter(i => i.track));
+    if (!page) { console.warn('📋 NULL page — API-kutsu epäonnistui'); break; }
+    const validTracks = page.items.filter(i => i.track);
+    console.log(`📋 Sivu ${pageNum}: ${validTracks.length} biisiä (${page.items.length} yhteensä, next: ${page.next ? 'kyllä' : 'ei'})`);
+    all.push(...validTracks);
     if (!page.next) break;
     url = page.next;
   }
+  console.log(`📋 Yhteensä ${all.length} biisiä haettu`);
   return all;
 }
 
