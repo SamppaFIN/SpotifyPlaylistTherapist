@@ -991,18 +991,22 @@ async function runSpotifyAnalysis(playlistId) {
 
     // Ensisijaisesti: käytä biisejä suoraan metadata-vastauksesta!
     // /playlists/{id} palauttaa tracks.items[] (max 100 biisiä ilman erillistä hakua)
+    // HUOM: Spotify API käyttää property-nimeä "track" TAI "item" riippuen endpointista
     let tracks = (meta.tracks?.items || [])
-      .filter(i => i.track)
-      .map(i => ({
-        track: {
-          id: i.track.id,
-          name: i.track.name,
-          duration_ms: i.track.duration_ms,
-          popularity: i.track.popularity || 0,
-          artists: i.track.artists || [],
-          album: i.track.album || { name: '', images: [], release_date: '' },
-        },
-      }));
+      .filter(i => i.track || i.item)
+      .map(i => {
+        const t = i.track || i.item;
+        return {
+          track: {
+            id: t.id,
+            name: t.name,
+            duration_ms: t.duration_ms,
+            popularity: t.popularity || 0,
+            artists: t.artists || [],
+            album: t.album || { name: '', images: [], release_date: '' },
+          },
+        };
+      });
 
     const totalTracks = meta.tracks?.total || tracks.length;
     status.textContent = `Haetaan biisejä... (${tracks.length}/${totalTracks})`;
