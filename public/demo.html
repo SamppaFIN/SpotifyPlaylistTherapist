@@ -721,10 +721,18 @@ async function fetchPlaylistMeta(playlistId) {
   return data;
 }
 
-async function fetchAllPlaylistTracks(playlistId, tracksHref = null) {
+async function fetchAllPlaylistTracks(playlistId, tracksHref = null, userId = null) {
   const all = [];
-  // Käytä Spotifyn omaa href-osoitetta jos saatavilla (kiertää mahdolliset API-muutokset)
-  let url = tracksHref ? tracksHref.replace('https://api.spotify.com/v1', '') : `/playlists/${playlistId}/tracks?limit=100`;
+  // Käytä Spotifyn omaa href-osoitetta jos saatavilla
+  let url;
+  if (tracksHref) {
+    url = tracksHref.replace('https://api.spotify.com/v1', '');
+  } else if (userId) {
+    // Vaihtoehtoinen polku: /users/{user_id}/playlists/{id}/tracks
+    url = `/users/${userId}/playlists/${playlistId}/tracks?limit=100`;
+  } else {
+    url = `/playlists/${playlistId}/tracks?limit=100`;
+  }
   let pageNum = 0;
   while (url) {
     pageNum++;
@@ -983,7 +991,16 @@ async function runSpotifyAnalysis(playlistId) {
 
     const totalTracks = meta.tracks?.total || 0;
     status.textContent = `Haetaan biisejä... (${totalTracks} kpl)`;
-    const tracks = await fetchAllPlaylistTracks(playlistId, meta.tracks?.href);
+    let tracks = await fetchAllPlaylistTracks(playlistId, meta.tracks?.href);
+    
+    // Jos tracks-haku epäonnistui, kokeile /users/-polkua
+    if (!tracks.length && totalTracks > 0) {
+      console.log('📋 Kokeillaan /users/-polkua...');
+      const me = await spotifyFetch('/me');
+      if (me && !me._error && me.id) {
+        tracks = await fetchAllPlaylistTracks(playlistId, null, me.id);
+      }
+    }
     if (!tracks.length) {
       // Jos meta lupaa biisejä mutta haku palautti tyhjää → todennäköisesti auth-ongelma
       if (totalTracks > 0) throw new Error('Haettu 0 biisiä, vaikka soittolistalla on ' + totalTracks + ' — todennäköisesti token-ongelma. Kokeile kirjautua uudelleen.');
