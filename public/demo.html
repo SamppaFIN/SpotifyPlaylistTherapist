@@ -252,7 +252,7 @@
       <!-- Vaihe 3: Soittolistan URL + analyysi -->
       <div class="report-section" style="max-width:420px;margin:1rem auto;text-align:left" id="step3Section">
         <label style="font-size:0.8rem;color:var(--c-text2)">3️⃣ Soittolistan Spotify-linkki</label>
-        <input type="text" id="playlistUrlInput" placeholder="https://open.spotify.com/playlist/..." value="https://open.spotify.com/playlist/5L4MWKG02WiFebCM4O2dxd?si=4d706900a2764166" style="width:100%;padding:0.5rem 0.75rem;border-radius:8px;border:1.5px solid var(--c-surface2);background:var(--c-bg);color:var(--c-text);font-size:0.85rem;margin-top:0.25rem;box-sizing:border-box" />
+        <input type="text" id="playlistUrlInput" placeholder="https://open.spotify.com/playlist/..." value="https://open.spotify.com/playlist/1N4Kh2YahtRxcCQDAVgjkm?si=c951a7593e4b4b97" style="width:100%;padding:0.5rem 0.75rem;border-radius:8px;border:1.5px solid var(--c-surface2);background:var(--c-bg);color:var(--c-text);font-size:0.85rem;margin-top:0.25rem;box-sizing:border-box" />
         <button class="btn btn-primary" onclick="startRealAnalysis()" style="margin-top:0.5rem;width:100%">
           🔍 Analysoi soittolista
         </button>
@@ -673,7 +673,10 @@ async function spotifyFetch(path, retry = true) {
   if (!token) return null;
 
   const res = await fetch(`${SPOTIFY_API}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Accept': 'application/json',
+    },
   });
 
   // 401 → token mitätöity, pakota refresh ja yritä uudelleen
@@ -682,7 +685,10 @@ async function spotifyFetch(path, retry = true) {
     const newToken = await getValidToken(true);
     if (newToken) {
       const retryRes = await fetch(`${SPOTIFY_API}${path}`, {
-        headers: { Authorization: `Bearer ${newToken}` },
+        headers: {
+          Authorization: `Bearer ${newToken}`,
+          'Accept': 'application/json',
+        },
       });
       if (retryRes.ok) return retryRes.json();
       console.warn('⚠️ Refresh auttoi, mutta API-kutsu epäonnistui silti:', retryRes.status);
@@ -717,7 +723,7 @@ async function fetchPlaylistMeta(playlistId) {
 
 async function fetchAllPlaylistTracks(playlistId) {
   const all = [];
-  let url = `/playlists/${playlistId}/tracks?limit=100`;
+  let url = `/playlists/${playlistId}/tracks?limit=100&market=FI`;
   let pageNum = 0;
   while (url) {
     pageNum++;
@@ -1025,7 +1031,7 @@ async function runSpotifyAnalysis(playlistId) {
     showView('landing');
     const msg = err.message || String(err);
     if (msg === '403_PLAYLIST_FORBIDDEN') {
-      showLandingError('🔒 403 — Ei oikeutta soittolistaan.<br><br><strong>Todennäköisiä syitä:</strong><br>1. Kirjauduit <strong>eri Spotify-tilillä</strong> kuin millä loit soittolistan (esim. Google vs. sähköposti).<br>2. Sovellus on "Development mode" -tilassa — lisää käyttäjä Spotify Dashboardissa.<br><br><strong>Kokeile:</strong> kirjaudu ulos → kirjaudu Spotifyhin <strong>sähköpostilla ja salasanalla</strong> (älä Googlella).');
+      showLandingError('🔒 403 — Ei oikeutta soittolistaan.<br><br><strong>Todennäköisiä syitä:</strong><br>1. Kirjauduit <strong>eri Spotify-tilillä</strong> kuin millä loit soittolistan (esim. Google vs. sähköposti).<br>2. Sovellus on "Development mode" -tilassa — lisää käyttäjä Spotify Dashboardissa.<br><br><strong>Kokeile:</strong> kirjaudu ulos → kirjaudu Spotifyhin <strong>sähköpostilla ja salasanalla</strong> (älä Googlella).<br><br><small style="color:var(--c-text2)">💡 Avaa F12 → Console ja etsi "Scopet:" nähdäksesi mitkä oikeudet myönnettiin.</small>');
       updateLoginStatus();
     } else if (msg.includes('401') || msg.includes('token') || msg.includes('kirjautunut')) {
       showLandingError('🔐 Token vanhentunut. Klikkaa "Kirjaudu Spotifyhin" uudelleen.');
