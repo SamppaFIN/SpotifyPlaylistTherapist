@@ -729,9 +729,9 @@ async function fetchAllPlaylistTracks(playlistId, tracksHref = null, userId = nu
     url = tracksHref.replace('https://api.spotify.com/v1', '');
   } else if (userId) {
     // Vaihtoehtoinen polku: /users/{user_id}/playlists/{id}/tracks
-    url = `/users/${userId}/playlists/${playlistId}/tracks?limit=100`;
+    url = `/users/${userId}/playlists/${playlistId}/items?limit=100`;
   } else {
-    url = `/playlists/${playlistId}/tracks?limit=100`;
+    url = `/playlists/${playlistId}/items?limit=100`;
   }
   let pageNum = 0;
   while (url) {
