@@ -987,19 +987,34 @@ async function runSpotifyAnalysis(playlistId) {
     status.textContent = 'Haetaan soittolistan metadataa...';
     const meta = await fetchPlaylistMeta(playlistId);
     if (meta?._error) throw new Error(`API_VIRHE_${meta._error}`);
-    if (!meta) throw new Error('Soittolistaa ei löytynyt. Onko se julkinen tai kirjautunut?');
+    if (!meta) throw new Error('Soittolistaa ei löytynyt.');
 
-    const totalTracks = meta.tracks?.total || 0;
-    status.textContent = `Haetaan biisejä... (${totalTracks} kpl)`;
-    let tracks = await fetchAllPlaylistTracks(playlistId, meta.tracks?.href);
-    
-    // Jos tracks-haku epäonnistui, kokeile /users/-polkua
-    if (!tracks.length && totalTracks > 0) {
-      console.log('📋 Kokeillaan /users/-polkua...');
-      const me = await spotifyFetch('/me');
-      if (me && !me._error && me.id) {
-        tracks = await fetchAllPlaylistTracks(playlistId, null, me.id);
+    // Ensisijaisesti: käytä biisejä suoraan metadata-vastauksesta!
+    // /playlists/{id} palauttaa tracks.items[] (max 100 biisiä ilman erillistä hakua)
+    let tracks = (meta.tracks?.items || [])
+      .filter(i => i.track)
+      .map(i => ({
+        track: {
+          id: i.track.id,
+          name: i.track.name,
+          duration_ms: i.track.duration_ms,
+          popularity: i.track.popularity || 0,
+          artists: i.track.artists || [],
+          album: i.track.album || { name: '', images: [], release_date: '' },
+        },
+      }));
+
+    const totalTracks = meta.tracks?.total || tracks.length;
+    status.textContent = `Haetaan biisejä... (${tracks.length}/${totalTracks})`;
+
+    // Jos metadata ei sisältänyt kaikkia biisejä (>100), hae loput
+    if (tracks.length < totalTracks) {
+      console.log(`📋 Metadata antoi ${tracks.length}/${totalTracks} — haetaan loput...`);
+      const extraTracks = await fetchAllPlaylistTracks(playlistId, meta.tracks?.href);
+      if (extraTracks.length > 0) {
+        tracks = extraTracks; // Käytä täyttä listausta
       }
+      // Jos extra-haku epäonnistui (403), käytä mitä saatiin metadatasta
     }
     if (!tracks.length) {
       // Jos meta lupaa biisejä mutta haku palautti tyhjää → todennäköisesti auth-ongelma
