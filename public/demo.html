@@ -717,13 +717,14 @@ async function fetchPlaylistMeta(playlistId) {
     if (data._error === 403) throw new Error('403_PLAYLIST_FORBIDDEN');
     return null;
   }
-  console.log('📋 Meta vastaus:', data ? `${data.name} — ${data.tracks?.total} biisiä` : 'NULL');
+  console.log('📋 Meta vastaus:', data ? `${data.name} — ${data.tracks?.total} biisiä, href: ${data.tracks?.href}` : 'NULL');
   return data;
 }
 
-async function fetchAllPlaylistTracks(playlistId) {
+async function fetchAllPlaylistTracks(playlistId, tracksHref = null) {
   const all = [];
-  let url = `/playlists/${playlistId}/tracks?limit=100&market=FI`;
+  // Käytä Spotifyn omaa href-osoitetta jos saatavilla (kiertää mahdolliset API-muutokset)
+  let url = tracksHref ? tracksHref.replace('https://api.spotify.com/v1', '') : `/playlists/${playlistId}/tracks?limit=100`;
   let pageNum = 0;
   while (url) {
     pageNum++;
@@ -982,7 +983,7 @@ async function runSpotifyAnalysis(playlistId) {
 
     const totalTracks = meta.tracks?.total || 0;
     status.textContent = `Haetaan biisejä... (${totalTracks} kpl)`;
-    const tracks = await fetchAllPlaylistTracks(playlistId);
+    const tracks = await fetchAllPlaylistTracks(playlistId, meta.tracks?.href);
     if (!tracks.length) {
       // Jos meta lupaa biisejä mutta haku palautti tyhjää → todennäköisesti auth-ongelma
       if (totalTracks > 0) throw new Error('Haettu 0 biisiä, vaikka soittolistalla on ' + totalTracks + ' — todennäköisesti token-ongelma. Kokeile kirjautua uudelleen.');
