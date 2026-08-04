@@ -955,10 +955,13 @@ async function startRealAnalysis() {
     return;
   }
 
-  // Tarkista onko token voimassa
-  const hasToken = await getValidToken();
-  if (!hasToken) {
-    // Aloita OAuth flow
+  // Tarkista token — jos puuttuu tai vanhentunut, pakota uusi login
+  const token = await getValidToken();
+  if (!token) {
+    console.log('🔐 Ei validia tokenia — ohjataan Spotifyhin...');
+    // Tyhjennä vanhat tokenit ja pakota uusi
+    localStorage.removeItem('spotify_tokens');
+    sessionStorage.setItem('pending_playlist_url', url);
     await spotifyLogin();
     return;
   }
@@ -974,15 +977,15 @@ async function runSpotifyAnalysis(playlistId) {
   try {
     status.textContent = 'Haetaan soittolistan metadataa...';
     const meta = await fetchPlaylistMeta(playlistId);
+    if (meta?._error) throw new Error(`API_VIRHE_${meta._error}`);
     if (!meta) throw new Error('Soittolistaa ei löytynyt. Onko se julkinen tai kirjautunut?');
 
     const totalTracks = meta.tracks?.total || 0;
     status.textContent = `Haetaan biisejä... (${totalTracks} kpl)`;
     const tracks = await fetchAllPlaylistTracks(playlistId);
     if (!tracks.length) {
-      const fullMeta = await spotifyFetch(`/playlists/${playlistId}`);
-      const fullTotal = fullMeta?.tracks?.total || 0;
-      if (fullTotal > 0) throw new Error(`Soittolistalla on ${fullTotal} biisiä, mutta haku epäonnistui. Kokeile uudelleen.`);
+      // Jos meta lupaa biisejä mutta haku palautti tyhjää → todennäköisesti auth-ongelma
+      if (totalTracks > 0) throw new Error('Haettu 0 biisiä, vaikka soittolistalla on ' + totalTracks + ' — todennäköisesti token-ongelma. Kokeile kirjautua uudelleen.');
       throw new Error('Soittolistalla ei ole biisejä tai haku epäonnistui.');
     }
 
@@ -1034,8 +1037,11 @@ async function runSpotifyAnalysis(playlistId) {
       showLandingError('🔒 403 — Ei oikeutta soittolistaan.<br><br><strong>Todennäköisiä syitä:</strong><br>1. Kirjauduit <strong>eri Spotify-tilillä</strong> kuin millä loit soittolistan (esim. Google vs. sähköposti).<br>2. Sovellus on "Development mode" -tilassa — lisää käyttäjä Spotify Dashboardissa.<br><br><strong>Kokeile:</strong> kirjaudu ulos → kirjaudu Spotifyhin <strong>sähköpostilla ja salasanalla</strong> (älä Googlella).<br><br><small style="color:var(--c-text2)">💡 Avaa F12 → Console ja etsi "Scopet:" nähdäksesi mitkä oikeudet myönnettiin.</small>');
       updateLoginStatus();
     } else if (msg.includes('401') || msg.includes('token') || msg.includes('kirjautunut')) {
-      showLandingError('🔐 Token vanhentunut. Klikkaa "Kirjaudu Spotifyhin" uudelleen.');
+      // Pakota uusi login — vanhat tokenit roskiin
+      localStorage.removeItem('spotify_tokens');
+      showLandingError('🔐 Token vanhentunut. Kirjaudutaan uudelleen...');
       updateLoginStatus();
+      setTimeout(() => spotifyLoginOnly(), 1500);
     } else {
       showLandingError('❌ ' + msg);
     }
