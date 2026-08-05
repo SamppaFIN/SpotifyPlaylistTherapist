@@ -534,7 +534,7 @@ async function fetchAllMyPlaylists() {
 
 async function fetchAllPlaylistTracks(playlistId) {
   var all = [];
-  var url = '/playlists/' + playlistId + '/tracks?limit=100';
+  var url = '/playlists/' + playlistId + '/items?limit=100';
 
   while (url) {
     // url may be absolute – strip API base
@@ -746,7 +746,7 @@ async function openPlaylist(playlistId) {
       var progress = totalTracks > 0 ? Math.round((allTrackItems.length / totalTracks) * 100) : 50;
       setLoadingProgress(progress, 'Haetaan biisejä... (' + allTrackItems.length + '/' + (totalTracks || '?') + ')');
 
-      var page = await spotifyFetch('/playlists/' + playlistId + '/tracks?limit=' + limit + '&offset=' + offset);
+      var page = await spotifyFetch('/playlists/' + playlistId + '/items?limit=' + limit + '&offset=' + offset);
       if (!page || page._error) break;
 
       var validTracks = page.items.filter(function(i) { return i.track; });
