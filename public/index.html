@@ -190,6 +190,93 @@
     }
     .detail-spotify-link:hover { opacity: 0.8; }
 
+    /* ═════════════════════ ANALYSIS PANEL ═════════════════════ */
+    .analysis-container { margin: 1rem 0; }
+    .analysis-card {
+      background: var(--c-surface); border-radius: var(--radius);
+      padding: 1.25rem; margin-bottom: 1rem;
+      border: 1.5px solid var(--c-accent2);
+    }
+    .analysis-headline {
+      font-size: clamp(1rem, 3vw, 1.3rem); font-weight: 700; line-height: 1.3;
+      background: linear-gradient(135deg, var(--c-accent), var(--c-accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 0.75rem; text-align: center;
+    }
+    .analysis-section {
+      background: var(--c-surface2); border-radius: var(--radius);
+      padding: 1rem; margin-bottom: 0.75rem;
+    }
+    .analysis-section h3 { font-size: 0.9rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
+
+    /* Insanity Meter */
+    .insanity-meter {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem; background: var(--c-surface2); border-radius: var(--radius);
+      margin-bottom: 0.75rem;
+    }
+    .insanity-emoji { font-size: 1.8rem; }
+    .insanity-bar-wrap { flex: 1; height: 10px; background: var(--c-bg); border-radius: 5px; overflow: hidden; }
+    .insanity-bar-fill {
+      height: 100%; border-radius: 5px;
+      background: linear-gradient(90deg, var(--c-success), var(--c-warning), var(--c-danger));
+      transition: width 0.8s ease;
+    }
+    .insanity-value { font-weight: 700; font-size: 1.3rem; min-width: 3.5rem; text-align: right; }
+
+    /* Big Five */
+    .big-five { display: flex; flex-direction: column; gap: 0.4rem; }
+    .trait-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; }
+    .trait-label { width: 120px; text-align: right; flex-shrink: 0; }
+    .trait-bar-wrap { flex: 1; height: 7px; background: var(--c-bg); border-radius: 4px; overflow: hidden; }
+    .trait-bar { height: 100%; border-radius: 4px; background: var(--c-accent); transition: width 0.6s ease; }
+    .trait-desc { width: 150px; color: var(--c-text2); font-size: 0.72rem; }
+
+    /* Vibe grid */
+    .vibe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.4rem; }
+    .vibe-item { background: var(--c-bg); padding: 0.5rem; border-radius: 6px; text-align: center; }
+    .vibe-item .vibe-label { color: var(--c-text2); font-size: 0.68rem; }
+    .vibe-item .vibe-value { font-weight: 600; font-size: 0.82rem; }
+
+    /* Adjectives */
+    .adjectives { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .adj-tag {
+      padding: 0.3rem 0.7rem; background: oklch(0.25 0.04 300 / 0.4);
+      border-radius: 100px; font-size: 0.82rem; font-weight: 600;
+    }
+
+    /* Settings */
+    .settings-btn { background: none; border: none; color: var(--c-text2); font-size: 1.1rem; cursor: pointer; padding: 0.25rem; border-radius: 6px; }
+    .settings-btn:hover { color: var(--c-text); background: var(--c-surface); }
+    .settings-modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: oklch(0 0 0 / 0.6); z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .settings-modal.open { display: flex; }
+    .settings-content {
+      background: var(--c-surface); border-radius: var(--radius);
+      padding: 1.5rem; max-width: 400px; width: 90%;
+      border: 1px solid var(--c-surface2);
+    }
+    .settings-content input {
+      width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px;
+      border: 1.5px solid var(--c-surface2); background: var(--c-bg);
+      color: var(--c-text); font-size: 0.85rem; margin: 0.5rem 0;
+    }
+
+    /* Analysis button */
+    .btn-analyze {
+      background: linear-gradient(135deg, var(--c-accent), var(--c-accent2));
+      color: #fff; font-weight: 700;
+    }
+    .btn-analyze:disabled { opacity: 0.5; pointer-events: none; }
+
+    @media (max-width: 600px) {
+      .trait-label { width: 80px; font-size: 0.72rem; }
+      .trait-desc { width: 100px; font-size: 0.68rem; }
+    }
+
     /* ═════════════════════ LOADING & STATES ═════════════════════ */
     .spinner {
       width: 40px; height: 40px; border: 3px solid var(--c-surface2);
@@ -243,8 +330,25 @@
   <div class="logo">🎧 <span>Psyko</span></div>
   <div id="headerRight" class="header-user">
     <span style="color:var(--c-text2);font-size:0.8rem">Ei kirjautunut</span>
+    <button class="settings-btn" onclick="toggleSettings()" title="Asetukset">⚙️</button>
   </div>
 </header>
+
+<!-- Settings Modal -->
+<div class="settings-modal" id="settingsModal">
+  <div class="settings-content">
+    <h3 style="margin-bottom:0.75rem">⚙️ Asetukset</h3>
+    <label style="font-size:0.8rem;color:var(--c-text2)">OpenRouter API Key</label>
+    <input type="password" id="openrouterKeyInput" placeholder="sk-or-v1-..." />
+    <p style="font-size:0.7rem;color:var(--c-text2);margin:0.25rem 0 0.75rem">
+      Tarvitaan psykoanalyysin generointiin. Avainta ei lähetetä minnekään muualle kuin OpenRouteriin.
+    </p>
+    <div style="display:flex;gap:0.5rem">
+      <button class="btn btn-primary btn-sm" onclick="saveSettings()">💾 Tallenna</button>
+      <button class="btn btn-outline btn-sm" onclick="toggleSettings()">Peruuta</button>
+    </div>
+  </div>
+</div>
 
 <main>
   <!-- VIEW: LOGIN -->
@@ -321,6 +425,17 @@
       <button class="btn btn-outline btn-sm" onclick="goToPlaylists()">← Takaisin soittolistoihin</button>
     </div>
     <div class="detail-header" id="detailHeader"></div>
+
+    <!-- Analysis trigger -->
+    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap" id="analysisActions">
+      <button class="btn btn-analyze" id="btnAnalyze" onclick="startAnalysis()">🧠 Psykoanalyysi</button>
+      <span style="color:var(--c-text2);font-size:0.75rem;display:flex;align-items:center" id="analysisHint">
+        Hakee audio-featuret ja generoi analyysin OpenRouterilla
+      </span>
+    </div>
+
+    <!-- Analysis results -->
+    <div class="analysis-container" id="analysisContainer" style="display:none"></div>
 
     <div class="progress-bar-wrap" id="trackProgressWrap" style="display:none">
       <div class="progress-bar-fill" id="trackProgressFill" style="width:0%"></div>
@@ -791,6 +906,259 @@ function goToPlaylists() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// PSYKOANALYYSI — trigger & render
+// ═══════════════════════════════════════════════════════════
+
+var analysisCache = {};
+
+async function startAnalysis() {
+  var btn = document.getElementById('btnAnalyze');
+  var hint = document.getElementById('analysisHint');
+  var container = document.getElementById('analysisContainer');
+
+  if (!currentPlaylist || !allTracks.length) return;
+
+  // Check API key
+  if (!getOpenRouterKey()) {
+    hint.textContent = '⚠️ Syötä OpenRouter API-avain asetuksista (⚙️)';
+    return;
+  }
+
+  // Check cache
+  var cacheKey = currentPlaylist.id;
+  if (analysisCache[cacheKey]) {
+    renderAnalysis(analysisCache[cacheKey]);
+    container.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Analysoi...';
+  hint.textContent = 'Haetaan audio-featureita...';
+  container.style.display = 'none';
+
+  try {
+    // Step 1: Collect track IDs
+    var trackIds = [];
+    for (var i = 0; i < allTracks.length; i++) {
+      var tr = allTracks[i].track || allTracks[i].item;
+      if (tr && tr.id) trackIds.push(tr.id);
+    }
+
+    // Step 2: Fetch audio features
+    hint.textContent = 'Haetaan audio-featureita (' + trackIds.length + ' biisiä)...';
+    var features = await fetchAllAudioFeatures(trackIds);
+    if (!features || features.length === 0) {
+      throw new Error('Audio-featureita ei saatu haettua.');
+    }
+
+    // Step 3: Compute stats
+    hint.textContent = 'Lasketaan analyysiä...';
+    var avg = computeAverages(features);
+    var emotion = mapToCircumplex(avg);
+    var bigFive = estimateBigFive(avg);
+    var vibe = describeVibe(avg);
+    var insanity = computeInsanity(avg, bigFive);
+    var rating = computePlaylistRating(avg);
+
+    // Step 4: Collect top tracks & artists
+    var artistCount = {};
+    for (var i2 = 0; i2 < allTracks.length; i2++) {
+      var tr2 = allTracks[i2].track || allTracks[i2].item;
+      if (!tr2 || !tr2.artists) continue;
+      for (var j = 0; j < tr2.artists.length; j++) {
+        var an = tr2.artists[j].name;
+        artistCount[an] = (artistCount[an] || 0) + 1;
+      }
+    }
+    var sortedArtists = Object.keys(artistCount).sort(function(a, b) { return artistCount[b] - artistCount[a]; });
+    var topArtists = sortedArtists.slice(0, 8);
+
+    var topTracks = allTracks.slice(0, 10).map(function(t) {
+      var tr3 = t.track || t.item;
+      return { name: tr3.name, artist: tr3.artists ? tr3.artists.map(function(a) { return a.name; }).join(', ') : '' };
+    });
+
+    // Step 5: Call LLM
+    hint.textContent = 'Psyko miettii... (OpenRouter)';
+    var llmResult = null;
+    try {
+      llmResult = await callOpenRouter(currentPlaylist.name, avg, topTracks, topArtists, allTracks.length);
+    } catch(llmErr) {
+      console.warn('LLM error:', llmErr);
+      // Fallback: generate from data only
+      llmResult = null;
+    }
+
+    // Step 6: Build result
+    var result = {
+      meta: {
+        playlistName: currentPlaylist.name,
+        playlistDescription: currentPlaylist.description || '',
+        trackCount: allTracks.length,
+        totalDurationMs: allTracks.reduce(function(s, t) { var tr = t.track || t.item; return s + (tr ? (tr.duration_ms || 0) : 0); }, 0),
+      },
+      audio: { averages: avg },
+      emotion: emotion,
+      bigFive: bigFive,
+      vibe: vibe,
+      llm: llmResult,
+      insanityRating: insanity,
+      playlistRating: rating,
+      topArtists: topArtists,
+    };
+
+    // Cache
+    analysisCache[cacheKey] = result;
+
+    // Render
+    renderAnalysis(result);
+    container.style.display = 'block';
+    hint.textContent = '✅ Valmis!';
+  } catch(err) {
+    hint.textContent = '❌ ' + (err.message || 'Tuntematon virhe');
+    console.error('Analysis error:', err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🧠 Psykoanalyysi';
+  }
+}
+
+function renderAnalysis(r) {
+  var container = document.getElementById('analysisContainer');
+  var p = r.llm || {};
+  var emoji = r.emotion.quadrant.split(' ')[1] || '🎧';
+  var ir = r.insanityRating;
+  var stars = '';
+  for (var s = 0; s < 10; s++) stars += s < r.playlistRating ? '★' : '☆';
+
+  var html = '<div class="analysis-card" style="text-align:center">' +
+    '<div style="font-size:3rem;margin-bottom:0.5rem">' + emoji + '</div>' +
+    '<div class="analysis-headline">' + esc(p.headline || (r.meta.playlistName + ' — ' + r.emotion.quadrant + ' sielunmaisema')) + '</div>' +
+    '<span style="display:inline-block;padding:0.3rem 0.8rem;background:var(--c-surface2);border-radius:100px;font-weight:600;font-size:0.85rem">' + r.emotion.quadrant + '</span>' +
+    '</div>';
+
+  // Insanity Meter
+  html += '<div class="analysis-section">' +
+    '<h3>🧠 Hulluusmittari</h3>' +
+    '<div class="insanity-meter">' +
+    '<span class="insanity-emoji">' + (ir < 30 ? '😊' : ir < 50 ? '🤔' : ir < 70 ? '😬' : '💀') + '</span>' +
+    '<div class="insanity-bar-wrap"><div class="insanity-bar-fill" style="width:' + ir + '%"></div></div>' +
+    '<span class="insanity-value">' + ir + '/100</span>' +
+    '</div>' +
+    '<p style="color:var(--c-text2);font-size:0.78rem;text-align:center">' +
+    (ir < 30 ? 'Ihan tervejärkinen. Liiankin ehkä?' : ir < 50 ? 'Pientä omituisuutta havaittavissa.' : ir < 70 ? 'Terapiaa suositellaan lämpimästi.' : 'Soittolistasi on todistusaineisto. Soita äidillesi.') +
+    '</p></div>';
+
+  // LLM Emotional State
+  if (p.emotionalState) {
+    html += '<div class="analysis-section">' +
+      '<h3>🎭 Tunnetila-analyysi</h3>' +
+      '<p style="font-size:0.85rem">' + esc(p.emotionalState) + '</p>' +
+      '<div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap">' +
+      '<div style="flex:1;min-width:80px;background:var(--c-bg);padding:0.5rem;border-radius:6px;text-align:center"><div style="color:var(--c-text2);font-size:0.7rem">Valence</div><div style="font-weight:700;font-size:1.1rem">' + pct(r.audio.averages.valence) + '</div></div>' +
+      '<div style="flex:1;min-width:80px;background:var(--c-bg);padding:0.5rem;border-radius:6px;text-align:center"><div style="color:var(--c-text2);font-size:0.7rem">Energy</div><div style="font-weight:700;font-size:1.1rem">' + pct(r.audio.averages.energy) + '</div></div>' +
+      '<div style="flex:1;min-width:80px;background:var(--c-bg);padding:0.5rem;border-radius:6px;text-align:center"><div style="color:var(--c-text2);font-size:0.7rem">Danceability</div><div style="font-weight:700;font-size:1.1rem">' + pct(r.audio.averages.danceability) + '</div></div>' +
+      '<div style="flex:1;min-width:80px;background:var(--c-bg);padding:0.5rem;border-radius:6px;text-align:center"><div style="color:var(--c-text2);font-size:0.7rem">Tempo</div><div style="font-weight:700;font-size:1.1rem">' + Math.round(r.audio.averages.tempo) + ' BPM</div></div>' +
+      '</div></div>';
+  }
+
+  // Big Five
+  html += '<div class="analysis-section">' +
+    '<h3>🧬 Big Five -persoonallisuus</h3>' +
+    '<div class="big-five">' +
+    renderBigFiveBar('Avoimuus', r.bigFive.openness, r.bigFive.labels.openness) +
+    renderBigFiveBar('Tunnollisuus', r.bigFive.conscientiousness, r.bigFive.labels.conscientiousness) +
+    renderBigFiveBar('Ekstraversio', r.bigFive.extraversion, r.bigFive.labels.extraversion) +
+    renderBigFiveBar('Sovinnollisuus', r.bigFive.agreeableness, r.bigFive.labels.agreeableness) +
+    renderBigFiveBar('Neuroottisuus', r.bigFive.neuroticism, r.bigFive.labels.neuroticism) +
+    '</div></div>';
+
+  // LLM Personality
+  if (p.personality) {
+    html += '<div class="analysis-section">' +
+      '<h3>📝 Persoonallisuusanalyysi</h3>' +
+      '<p style="font-size:0.85rem">' + esc(p.personality) + '</p></div>';
+  }
+
+  // Obsessive Themes
+  if (p.obsessiveThemes) {
+    html += '<div class="analysis-section">' +
+      '<h3>🔄 Pakkomielteet & teemat</h3>' +
+      '<p style="font-size:0.85rem">' + esc(p.obsessiveThemes) + '</p>' +
+      '<div style="margin-top:0.5rem;display:flex;gap:0.4rem;flex-wrap:wrap">' +
+      r.topArtists.slice(0, 6).map(function(a) { return '<span style="padding:0.25rem 0.6rem;background:var(--c-bg);border-radius:100px;font-size:0.75rem">🎤 ' + esc(a) + '</span>'; }).join('') +
+      '</div></div>';
+  }
+
+  // Freud
+  if (p.freudianDiagnosis) {
+    html += '<div class="analysis-section" style="border-left:3px solid var(--c-accent2)">' +
+      '<h3>🛋️ Freudilainen diagnoosi</h3>' +
+      '<p style="font-size:0.85rem">' + esc(p.freudianDiagnosis) + '</p>' +
+      (p.freudianStage ? '<p style="margin-top:0.4rem;font-weight:600;font-size:0.85rem">📌 ' + esc(p.freudianStage) + '</p>' : '') +
+      '</div>';
+  }
+
+  // Vibe
+  html += '<div class="analysis-section">' +
+    '<h3>🎵 Vibe-yhteenveto</h3>' +
+    '<div class="vibe-grid">' +
+    renderVibeItem('Päätunnelma', r.vibe.primaryMood) +
+    renderVibeItem('Energia', r.vibe.energyLevel) +
+    renderVibeItem('Tanssittavuus', r.vibe.danceabilityLevel) +
+    renderVibeItem('Sävellaji', r.vibe.keyMood) +
+    renderVibeItem('Tyyppi', r.vibe.playlistType) +
+    renderVibeItem('Tempo', r.vibe.tempoLabel) +
+    '</div></div>';
+
+  // Adjectives
+  if (p.adjectives) {
+    html += '<div class="analysis-section">' +
+      '<h3>🏷️ Kolme sanaa sinusta</h3>' +
+      '<div class="adjectives">' +
+      p.adjectives.map(function(a) { return '<span class="adj-tag">' + esc(a) + '</span>'; }).join('') +
+      '</div></div>';
+  }
+
+  // Rating & Recommendation
+  html += '<div class="analysis-section">' +
+    '<h3>⭐ Arvio & suositus</h3>' +
+    '<div style="color:var(--c-warning);font-size:1.1rem;letter-spacing:2px;margin-bottom:0.25rem">' + stars + ' <span style="color:var(--c-text2);font-size:0.8rem">' + r.playlistRating + '/10</span></div>' +
+    (p.recommendation ? '<p style="font-size:0.85rem">' + esc(p.recommendation) + '</p>' : '') +
+    '</div>';
+
+  // Footer
+  html += '<div style="text-align:center;padding:0.5rem;color:var(--c-text2);font-size:0.7rem">' +
+    '🎧 Analysoitu ' + r.meta.trackCount + ' biisistä • ' + formatDuration(r.meta.totalDurationMs) +
+    (r.llm ? ' • LLM: OpenRouter' : ' • ⚠️ LLM ei saatavilla — data-analyysi') +
+    '</div>';
+
+  container.innerHTML = html;
+  container.style.display = 'block';
+  window.scrollTo({ top: container.offsetTop - 80, behavior: 'smooth' });
+}
+
+function renderBigFiveBar(name, value, desc) {
+  return '<div class="trait-row">' +
+    '<span class="trait-label">' + name + '</span>' +
+    '<div class="trait-bar-wrap"><div class="trait-bar" style="width:' + (value * 100) + '%"></div></div>' +
+    '<span style="font-weight:600;width:26px;text-align:right;font-size:0.75rem">' + Math.round(value * 100) + '</span>' +
+    '<span class="trait-desc">' + desc + '</span>' +
+    '</div>';
+}
+
+function renderVibeItem(label, value) {
+  return '<div class="vibe-item">' +
+    '<div class="vibe-label">' + label + '</div>' +
+    '<div class="vibe-value">' + value + '</div>' +
+    '</div>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// UTILS
+
+// ═══════════════════════════════════════════════════════════
 // FLOW: LOAD ALL PLAYLISTS
 // ═══════════════════════════════════════════════════════════
 
@@ -851,7 +1219,8 @@ function updateHeaderUser(profile) {
       imageHtml +
       (profile ? profile.display_name : 'Kirjautunut') +
     '</span>' +
-    '<button class="btn btn-sm btn-outline" onclick="logout()">Kirjaudu ulos</button>';
+    '<button class="btn btn-sm btn-outline" onclick="logout()">Kirjaudu ulos</button>' +
+    '<button class="settings-btn" onclick="toggleSettings()" title="Asetukset">⚙️</button>';
 }
 
 function updateLoginUI(isLoggedIn) {
@@ -879,13 +1248,238 @@ function logout() {
   allTracks = [];
   updateLoginUI(false);
   document.getElementById('headerRight').innerHTML =
-    '<span style="color:var(--c-text2);font-size:0.8rem">Ei kirjautunut</span>';
+    '<span style="color:var(--c-text2);font-size:0.8rem">Ei kirjautunut</span>' +
+    '<button class="settings-btn" onclick="toggleSettings()" title="Asetukset">⚙️</button>';
   showView('login');
   window.scrollTo(0, 0);
 }
 
 // ═══════════════════════════════════════════════════════════
-// UTILS
+// SETTINGS
+// ═══════════════════════════════════════════════════════════
+
+var DEFAULT_OPENROUTER_KEY = '';
+
+function getOpenRouterKey() {
+  return localStorage.getItem('psyko_openrouter_key') || DEFAULT_OPENROUTER_KEY;
+}
+
+function toggleSettings() {
+  var modal = document.getElementById('settingsModal');
+  if (modal.classList.contains('open')) {
+    modal.classList.remove('open');
+  } else {
+    document.getElementById('openrouterKeyInput').value = getOpenRouterKey();
+    modal.classList.add('open');
+  }
+}
+
+function saveSettings() {
+  var key = document.getElementById('openrouterKeyInput').value.trim();
+  if (key) {
+    localStorage.setItem('psyko_openrouter_key', key);
+  }
+  document.getElementById('settingsModal').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUDIO FEATURES FETCHING
+// ═══════════════════════════════════════════════════════════
+
+async function fetchAudioFeaturesBatch(trackIds) {
+  if (trackIds.length === 0) return [];
+  var ids = trackIds.join(',');
+  var data = await spotifyFetch('/audio-features?ids=' + ids);
+  return (data && data.audio_features ? data.audio_features.filter(Boolean) : []);
+}
+
+async function fetchAllAudioFeatures(trackIds) {
+  var all = [];
+  for (var i = 0; i < trackIds.length; i += 100) {
+    var chunk = trackIds.slice(i, i + 100);
+    var features = await fetchAudioFeaturesBatch(chunk);
+    all.push.apply(all, features);
+    await sleep(20);
+  }
+  return all;
+}
+
+// ═══════════════════════════════════════════════════════════
+// ANALYSIS COMPUTATION
+// ═══════════════════════════════════════════════════════════
+
+function computeAverages(features) {
+  if (!features.length) return null;
+  var n = features.length;
+  var sum = function(fn) { return features.reduce(function(s, f) { return s + fn(f); }, 0); };
+  var major = features.filter(function(f) { return f.mode === 1; }).length;
+  return {
+    count: n,
+    acousticness: sum(function(f) { return f.acousticness; }) / n,
+    danceability: sum(function(f) { return f.danceability; }) / n,
+    energy: sum(function(f) { return f.energy; }) / n,
+    instrumentalness: sum(function(f) { return f.instrumentalness; }) / n,
+    liveness: sum(function(f) { return f.liveness; }) / n,
+    loudness: sum(function(f) { return f.loudness; }) / n,
+    speechiness: sum(function(f) { return f.speechiness; }) / n,
+    valence: sum(function(f) { return f.valence; }) / n,
+    tempo: sum(function(f) { return f.tempo; }) / n,
+    majorKeyRatio: major / n,
+  };
+}
+
+function mapToCircumplex(avg) {
+  var v = avg.valence, e = avg.energy;
+  var quadrant;
+  if (v >= 0.55 && e >= 0.55) quadrant = 'iloinen 😄';
+  else if (v < 0.45 && e >= 0.55) quadrant = 'vihainen 😤';
+  else if (v < 0.45 && e < 0.45) quadrant = 'surullinen 😢';
+  else if (v >= 0.55 && e < 0.45) quadrant = 'rentoutunut 😌';
+  else quadrant = 'neutraali 😐';
+  return { quadrant: quadrant, label: quadrant.split(' ')[0], valence: v, energy: e };
+}
+
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+function estimateBigFive(avg) {
+  var e = avg.energy, d = avg.danceability, v = avg.valence;
+  var a = avg.acousticness, i = avg.instrumentalness, m = avg.majorKeyRatio, s = avg.speechiness;
+  var openness = clamp(a * 0.4 + i * 0.3 + (1 - d) * 0.3, 0, 1);
+  var conscientiousness = clamp(m * 0.3 + d * 0.4 + e * 0.3, 0, 1);
+  var extraversion = clamp(e * 0.5 + d * 0.3 + v * 0.2, 0, 1);
+  var agreeableness = clamp(v * 0.5 + m * 0.3 + (1 - s) * 0.2, 0, 1);
+  var neuroticism = clamp((1 - v) * 0.4 + (1 - m) * 0.3 + (1 - d) * 0.3, 0, 1);
+
+  var lt = function(val, lo, mi, hi) { return val < 0.35 ? lo : val > 0.65 ? hi : mi; };
+  var le = function(val) { return val < 0.3 ? 'introvertti 🦉' : val < 0.5 ? 'ambivertti 🦊' : val < 0.7 ? 'ekstrovertti 🦜' : 'bile-eläin 🦚'; };
+
+  return {
+    openness: openness, conscientiousness: conscientiousness, extraversion: extraversion,
+    agreeableness: agreeableness, neuroticism: neuroticism,
+    labels: {
+      openness: lt(openness, 'sulkeutunut 🏠', 'tasapainoinen 🚪', 'äärimmäisen avoin 🌌'),
+      conscientiousness: lt(conscientiousness, 'spontaani 🎲', 'järjestelmällinen 📋', 'pakkomielteinen 📐'),
+      extraversion: le(extraversion),
+      agreeableness: lt(agreeableness, 'kapinallinen 🤘', 'diplomaattinen 🤝', 'miellyttäjä 🥺'),
+      neuroticism: lt(neuroticism, 'kylmän rauhallinen 🧊', 'tunteellinen 🌊', 'hermoromahduksen partaalla 💥'),
+    },
+  };
+}
+
+function describeVibe(avg) {
+  var md = function(v, e) {
+    if (v > 0.7 && e > 0.7) return 'euforinen ✨';
+    if (v > 0.6 && e > 0.5) return 'iloinen 🌞';
+    if (v > 0.5 && e < 0.4) return 'seesteinen 🧘';
+    if (v < 0.3 && e > 0.7) return 'aggressiivinen 🔥';
+    if (v < 0.3 && e < 0.3) return 'melankolinen 🥀';
+    if (v < 0.4 && e > 0.5) return 'levoton 🌪️';
+    if (v > 0.5 && e < 0.5) return 'rentoutunut 😌';
+    return 'tasapainoinen ⚖️';
+  };
+  var cp = function() {
+    if (avg.energy > 0.7 && avg.danceability > 0.6) return 'Bilemix 🎉';
+    if (avg.acousticness > 0.6 && avg.energy < 0.4) return 'Akustinen ilta 🕯️';
+    if (avg.instrumentalness > 0.5) return 'Instrumentaali/fokus 🎼';
+    if (avg.speechiness > 0.3) return 'Lyriikkapainotteinen 📝';
+    if (avg.valence < 0.3) return 'Synkkä sielunmaisema 🖤';
+    if (avg.energy > 0.6 && avg.valence > 0.5) return 'Feel-good 🇫🇮';
+    if (avg.tempo > 130) return 'Nopeatempoinen 🏃';
+    return 'Eklektinen sekoitus 🎨';
+  };
+  var tl = function(b) { return b < 60 ? 'erittäin hidas 🐢' : b < 80 ? 'hidas 🚶' : b < 100 ? 'kohtalainen 🚴' : b < 120 ? 'reipas 🏃' : b < 140 ? 'nopea 🏎️' : 'äärimmäisen nopea ⚡'; };
+  var el = function(e) { return e > 0.65 ? 'korkea 🚀' : e > 0.35 ? 'kohtalainen ⚡' : 'matala 🔋'; };
+  var dl = function(d) { return d > 0.65 ? 'tanssilattialla 💃' : d > 0.35 ? 'nyökkäilyä 🎵' : 'sohvaperuna 🛋️'; };
+  var km = function(m) { return m > 0.65 ? 'pääosin duuri ☀️' : m < 0.35 ? 'pääosin molli 🌙' : 'tasapainossa ⚖️'; };
+  return {
+    primaryMood: md(avg.valence, avg.energy),
+    energyLevel: el(avg.energy),
+    danceabilityLevel: dl(avg.danceability),
+    playlistType: cp(),
+    keyMood: km(avg.majorKeyRatio),
+    tempoLabel: tl(avg.tempo),
+  };
+}
+
+function pct(v) { return Math.round(v * 100) + '%'; }
+
+function computeInsanity(avg, bigFive) {
+  var v = avg.valence, e = avg.energy;
+  return Math.round(clamp(((1 - v) * 0.4 + (1 - Math.max(0.3, e)) * 0.3 + bigFive.neuroticism * 0.3) * 100, 5, 95));
+}
+
+function computePlaylistRating(avg) {
+  return Math.round(clamp((avg.valence * 0.3 + avg.energy * 0.2 + avg.danceability * 0.3 + 0.3) * 10, 3, 10));
+}
+
+// ═══════════════════════════════════════════════════════════
+// OPENROUTER LLM CALL
+// ═══════════════════════════════════════════════════════════
+
+async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCount) {
+  var apiKey = getOpenRouterKey();
+  if (!apiKey) throw new Error('OpenRouter API-avain puuttuu. Klikkaa ⚙️ ja syötä avain.');
+
+  var prompt = 'Olet Psyko, musiikillinen psykoanalyytikko. Analysoit Spotify-soittolistoja ja niiden audio-ominaisuuksia luodaksesi humoristisen mutta oivaltavan psykologisen profiilin kuuntelijasta. VASTAA AINOASTAAN JSON-MUODOSSA, ei muuta tekstiä.\n\n' +
+    'Soittolista: ' + playlistName + '\n' +
+    'Biisejä: ' + trackCount + '\n' +
+    '\nAudio-ominaisuuksien keskiarvot:\n' +
+    '- Valence (positiivisuus): ' + pct(avg.valence) + '\n' +
+    '- Energy (energisyys): ' + pct(avg.energy) + '\n' +
+    '- Danceability (tanssittavuus): ' + pct(avg.danceability) + '\n' +
+    '- Acousticness (akustisuus): ' + pct(avg.acousticness) + '\n' +
+    '- Instrumentalness: ' + pct(avg.instrumentalness) + '\n' +
+    '- Tempo: ' + Math.round(avg.tempo) + ' BPM\n' +
+    '- Duuri/molli: ' + pct(avg.majorKeyRatio) + ' duuria\n' +
+    '\nTop-artistit: ' + topArtists.join(', ') + '\n' +
+    'Top-biisit: ' + topTracks.map(function(t, i) { return (i+1) + '. ' + t.name + ' - ' + t.artist; }).join('; ') + '\n' +
+    '\nAnalysoi ja vastaa JSON:\n' +
+    '{\n' +
+    '  "headline": "räväkkä otsikko (max 10 sanaa, suomeksi)",\n' +
+    '  "emotionalState": "tunnetila-analyysi (2-3 lausetta suomeksi)",\n' +
+    '  "personality": "persoonallisuusanalyysi (2-3 lausetta suomeksi)",\n' +
+    '  "obsessiveThemes": "pakkomielteet ja toistuvat teemat (1-2 lausetta suomeksi)",\n' +
+    '  "freudianDiagnosis": "freudilainen diagnoosi (1-2 lausetta suomeksi)",\n' +
+    '  "freudianStage": "mihin Freudin psykoseksuaaliseen kehitysvaiheeseen kuuntelija on jäänyt (suomeksi)",\n' +
+    '  "adjectives": ["adjektiivi1", "adjektiivi2", "adjektiivi3"],\n' +
+    '  "recommendation": "suositus kenelle tai mihin tilanteeseen soittolista sopii (suomeksi)"\n' +
+    '}';
+
+  var res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey,
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-flash-1.5',
+      messages: [
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.9,
+      max_tokens: 600,
+    }),
+  });
+
+  if (!res.ok) {
+    var errText = await res.text();
+    console.error('OpenRouter error:', res.status, errText);
+    throw new Error('OpenRouter API-virhe (' + res.status + '). Tarkista API-avain.');
+  }
+
+  var data = await res.json();
+  var content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  if (!content) throw new Error('Tyhjä vastaus OpenRouterilta');
+
+  // Parse JSON — clean possible markdown fences
+  content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  try {
+    return JSON.parse(content);
+  } catch(e) {
+    console.error('JSON parse error:', e, 'Content:', content);
+    throw new Error('LLM-vastauksen jäsennys epäonnistui. Kokeile uudelleen.');
+  }
+}
 // ═══════════════════════════════════════════════════════════
 
 function sleep(ms) {
