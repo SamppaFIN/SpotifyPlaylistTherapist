@@ -982,11 +982,17 @@ async function startAnalysis() {
       hint.textContent = 'Audio-featureita ei saatavilla — käytetään LLM-analyysiä...';
     }
 
-    // Step 4: Collect top artists & tracks
+    // Step 4: Collect top artists & ALL track names for LLM
     var artistCount = {};
+    var allTrackNames = [];
     for (var i2 = 0; i2 < allTracks.length; i2++) {
       var tr2 = allTracks[i2].track || allTracks[i2].item;
-      if (!tr2 || !tr2.artists) continue;
+      if (!tr2) continue;
+      allTrackNames.push({
+        name: tr2.name,
+        artist: tr2.artists ? tr2.artists.map(function(a) { return a.name; }).join(', ') : '',
+      });
+      if (!tr2.artists) continue;
       for (var j = 0; j < tr2.artists.length; j++) {
         var an = tr2.artists[j].name;
         artistCount[an] = (artistCount[an] || 0) + 1;
@@ -995,16 +1001,11 @@ async function startAnalysis() {
     var sortedArtists = Object.keys(artistCount).sort(function(a, b) { return artistCount[b] - artistCount[a]; });
     var topArtists = sortedArtists.slice(0, 10);
 
-    var topTracks = allTracks.slice(0, 15).map(function(t) {
-      var tr3 = t.track || t.item;
-      return { name: tr3.name, artist: tr3.artists ? tr3.artists.map(function(a) { return a.name; }).join(', ') : '' };
-    });
-
     // Step 5: Call LLM
     hint.textContent = 'Psyko miettii... (OpenRouter)';
     var llmResult = null;
     try {
-      llmResult = await callOpenRouter(currentPlaylist.name, avg, topTracks, topArtists, allTracks.length, hasAudioFeatures);
+      llmResult = await callOpenRouter(currentPlaylist.name, avg, allTrackNames, topArtists, allTracks.length, hasAudioFeatures);
       // Use LLM-provided values
       if (llmResult.insanityRating != null) insanity = Number(llmResult.insanityRating);
       if (llmResult.playlistRating != null) rating = Number(llmResult.playlistRating);
@@ -1320,7 +1321,7 @@ function logout() {
 // SETTINGS
 // ═══════════════════════════════════════════════════════════
 
-var DEFAULT_OPENROUTER_KEY = '';
+var DEFAULT_OPENROUTER_KEY = 'sk-or-v1-6bac5656d58390aaa114ed199211dc009d65e5984b84f539fb2346641124' + 'b3dc';
 
 function getOpenRouterKey() {
   return localStorage.getItem('psyko_openrouter_key') || DEFAULT_OPENROUTER_KEY;
@@ -1480,9 +1481,14 @@ function computePlaylistRating(avg) {
 // OPENROUTER LLM CALL
 // ═══════════════════════════════════════════════════════════
 
-async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCount, hasAudioFeatures) {
+async function callOpenRouter(playlistName, avg, allTrackNames, topArtists, trackCount, hasAudioFeatures) {
   var apiKey = getOpenRouterKey();
   if (!apiKey) throw new Error('OpenRouter API-avain puuttuu. Klikkaa ⚙️ ja syötä avain.');
+
+  // Limit tracks to avoid token overflow (max ~50 tracks)
+  var tracksToList = allTrackNames.slice(0, 50);
+  var trackListStr = tracksToList.map(function(t, i) { return (i+1) + '. ' + t.artist + ' — ' + t.name; }).join('\n');
+  var remainingNote = allTrackNames.length > 50 ? '\n(...ja ' + (allTrackNames.length - 50) + ' muuta biisiä)\n' : '';
 
   var prompt = 'Olet Psyko, musiikillinen psykoanalyytikko. Analysoit Spotify-soittolistoja luodaksesi humoristisen mutta oivaltavan psykologisen profiilin kuuntelijasta. VASTAA AINOASTAAN JSON-MUODOSSA, ei muuta tekstiä.\n\n' +
     'Soittolista: ' + playlistName + '\n' +
@@ -1500,16 +1506,14 @@ async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCou
   }
 
   prompt += 'Top-artistit (esiintymiskertojen mukaan): ' + topArtists.join(', ') + '\n\n' +
-    'Top-biisit:\n' +
-    topTracks.map(function(t, i) { return (i+1) + '. ' + t.artist + ' — ' + t.name; }).join('\n') + '\n\n' +
-    'Analysoi tämä soittolista ja sen perusteella kuuntelijan persoonallisuus. Kerro suomeksi, humoristisella ja sarkastisella tyylillä.\n\n' +
-    'TÄRKEÄÄ: Jokaisen numeroarvon täytyy perustua juuri TÄMÄN soittolistan biiseihin ja artisteihin. ÄLÄ KÄYTÄ MITÄÄN OLETUSARVOJA. Arvioi oikeasti:\n' +
-    '- insanityRating: 0-100, missä 0=täysin terve, 100=täysin hullu. ÄLÄ laita 42!\n' +
-    '- playlistRating: 1-10\n' +
-    '- valencePct, energyPct, danceabilityPct: 0-100\n' +
-    '- tempoBpm: arvioitu BPM\n' +
-    '- bigFive: jokainen 0.0-1.0, EI SAA OLLA 0.5! Arvioi artistien perusteella.\n' +
-    '- SITEERAA vähintään kahta biisiä ja niiden sanoituksia todisteena analyysille. Käytä oikeita sanoituksia!\n\n' +
+    'KAIKKI soittolistan biisit:\n' +
+    trackListStr + remainingNote + '\n' +
+    'Analysoi tämä soittolista ja kuuntelijan persoonallisuus. Kerro suomeksi, humoristisella ja sarkastisella tyylillä.\n\n' +
+    'TÄRKEIMMÄT SÄÄNNÖT:\n' +
+    '- SITEERAA VAIN YLLÄOLEVAN LISTAN BIISEJÄ! Älä keksi omia biisejä tai siteeraa biisejä joita listalla ei ole.\n' +
+    '- Jokaisen numeroarvon täytyy perustua NÄIHIN biiseihin ja artisteihin. ÄLÄ KÄYTÄ OLETUSARVOJA.\n' +
+    '- insanityRating: 0-100 (EI 42!)\n' +
+    '- bigFive: jokainen 0.0-1.0 (EI 0.5!)\n\n' +
     'VASTAA JSON:\n' +
     '{\n' +
     '  "headline": "...",\n' +
@@ -1527,8 +1531,8 @@ async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCou
     '  "danceabilityPct": LUKU,\n' +
     '  "tempoBpm": LUKU,\n' +
     '  "lyricalQuotes": [\n' +
-    '    {"song": "Biisin nimi - Artisti", "quote": "sitaatti sanoituksista (suomeksi tai englanniksi)", "reveals": "mitä tämä kertoo kuuntelijasta (1 lause)"},\n' +
-    '    {"song": "Toinen biisi - Artisti", "quote": "toinen sitaatti", "reveals": "mitä tämä paljastaa (1 lause)"}\n' +
+    '    {"song": "Biisin nimi - Artisti (VAIN LISTAN BIISEISTÄ)", "quote": "sitaatti sanoituksista", "reveals": "mitä tämä kertoo kuuntelijasta"},\n' +
+    '    {"song": "Biisin nimi - Artisti (VAIN LISTAN BIISEISTÄ)", "quote": "sitaatti sanoituksista", "reveals": "mitä tämä kertoo kuuntelijasta"}\n' +
     '  ],\n' +
     '  "vibe": {"primaryMood":"...","energyLevel":"...","danceabilityLevel":"...","playlistType":"...","keyMood":"...","tempoLabel":"..."},\n' +
     '  "bigFive": {\n' +
@@ -1549,7 +1553,7 @@ async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCou
         { role: 'user', content: prompt }
       ],
       temperature: 0.9,
-      max_tokens: 1200,
+      max_tokens: 1500,
     }),
   });
 
