@@ -542,7 +542,7 @@ async function fetchAllPlaylistTracks(playlistId) {
     var page = await spotifyFetch(path);
     if (!page || page._error) break;
 
-    var validTracks = page.items.filter(function(i) { return i.track; });
+    var validTracks = page.items.filter(function(i) { return i.track || i.item; });
     all.push.apply(all, validTracks);
 
     if (!page.next) break;
@@ -655,7 +655,7 @@ function renderPlaylistDetail(playlist, tracks) {
   allTracks = tracks;
 
   var imageUrl = playlist.images && playlist.images[0] ? playlist.images[0].url : null;
-  var totalDurationMs = tracks.reduce(function(s, t) { return s + (t.track ? (t.track.duration_ms || 0) : 0); }, 0);
+  var totalDurationMs = tracks.reduce(function(s, t) { var tr = t.track || t.item; return s + (tr ? (tr.duration_ms || 0) : 0); }, 0);
 
   // Render header
   var header = document.getElementById('detailHeader');
@@ -687,7 +687,7 @@ function renderPlaylistDetail(playlist, tracks) {
 }
 
 function renderTrackRow(item, index) {
-  var t = item.track;
+  var t = item.track || item.item;
   if (!t) return '';
   var imgs = t.album && t.album.images;
   var coverUrl = imgs && imgs[2] ? imgs[2].url : (imgs && imgs[0] ? imgs[0].url : null);
@@ -749,7 +749,7 @@ async function openPlaylist(playlistId) {
       var page = await spotifyFetch('/playlists/' + playlistId + '/items?limit=' + limit + '&offset=' + offset);
       if (!page || page._error) break;
 
-      var validTracks = page.items.filter(function(i) { return i.track; });
+      var validTracks = page.items.filter(function(i) { return i.track || i.item; });
       allTrackItems.push.apply(allTrackItems, validTracks);
 
       if (totalTracks === 0) totalTracks = page.total || 0;
