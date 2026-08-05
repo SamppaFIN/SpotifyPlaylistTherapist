@@ -422,16 +422,14 @@
     </div>
     <div class="detail-header" id="detailHeader"></div>
 
-    <!-- Analysis trigger -->
-    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap" id="analysisActions">
-      <button class="btn btn-analyze" id="btnAnalyze" onclick="startAnalysis()">🧠 Psykoanalyysi</button>
-      <span style="color:var(--c-text2);font-size:0.75rem;display:flex;align-items:center" id="analysisHint">
-        Hakee audio-featuret ja generoi analyysin OpenRouterilla
-      </span>
+    <!-- Analysis loading & results -->
+    <div class="analysis-container" id="analysisContainer" style="display:none">
+      <div style="text-align:center;padding:1rem" id="analysisLoading">
+        <div class="spinner" style="width:24px;height:24px;border-width:2px;margin:0 auto 0.5rem"></div>
+        <span style="color:var(--c-text2);font-size:0.8rem" id="analysisHint">Psyko miettii...</span>
+      </div>
+      <div id="analysisContent"></div>
     </div>
-
-    <!-- Analysis results -->
-    <div class="analysis-container" id="analysisContainer" style="display:none"></div>
 
     <div class="progress-bar-wrap" id="trackProgressWrap" style="display:none">
       <div class="progress-bar-fill" id="trackProgressFill" style="width:0%"></div>
@@ -890,6 +888,9 @@ async function openPlaylist(playlistId) {
     renderPlaylistDetail(playlist, allTrackItems);
     showView('playlist-detail');
     window.scrollTo(0, 0);
+
+    // Auto-trigger analysis
+    runAnalysis();
   } catch(err) {
     console.error('Virhe biisien haussa:', err);
     showView('playlists');
@@ -897,41 +898,38 @@ async function openPlaylist(playlistId) {
 }
 
 function goToPlaylists() {
+  document.getElementById('analysisContainer').style.display = 'none';
+  analysisCache = {};
   showView('playlists');
   window.scrollTo(0, 0);
 }
 
 // ═══════════════════════════════════════════════════════════
-// PSYKOANALYYSI — trigger & render
+// PSYKOANALYYSI — auto-trigger & render
 // ═══════════════════════════════════════════════════════════
 
 var analysisCache = {};
 
-async function startAnalysis() {
-  var btn = document.getElementById('btnAnalyze');
+async function runAnalysis() {
   var hint = document.getElementById('analysisHint');
   var container = document.getElementById('analysisContainer');
+  var loading = document.getElementById('analysisLoading');
+  var content = document.getElementById('analysisContent');
 
   if (!currentPlaylist || !allTracks.length) return;
 
-  // Check API key
-  if (!getOpenRouterKey()) {
-    hint.textContent = '⚠️ Syötä OpenRouter API-avain asetuksista (⚙️)';
-    return;
-  }
+  container.style.display = 'block';
+  loading.style.display = 'block';
+  content.innerHTML = '';
 
-  // Check cache
   var cacheKey = currentPlaylist.id;
   if (analysisCache[cacheKey]) {
     renderAnalysis(analysisCache[cacheKey]);
-    container.style.display = 'block';
+    loading.style.display = 'none';
     return;
   }
 
-  btn.disabled = true;
-  btn.textContent = '⏳ Analysoi...';
-  hint.textContent = 'Kerätään biisitietoja...';
-  container.style.display = 'none';
+  hint.textContent = 'Psyko miettii...';
 
   try {
     // Step 1: Collect track data
@@ -1054,20 +1052,17 @@ async function startAnalysis() {
     analysisCache[cacheKey] = result;
 
     // Render
+    loading.style.display = 'none';
     renderAnalysis(result);
-    container.style.display = 'block';
-    hint.textContent = '✅ Valmis!';
   } catch(err) {
-    hint.textContent = '❌ ' + (err.message || 'Tuntematon virhe');
+    loading.style.display = 'none';
+    content.innerHTML = '<p style="color:var(--c-danger);text-align:center;font-size:0.85rem">❌ ' + esc(err.message || 'Tuntematon virhe') + '</p>';
     console.error('Analysis error:', err);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '🧠 Psykoanalyysi';
   }
 }
 
 function renderAnalysis(r) {
-  var container = document.getElementById('analysisContainer');
+  var container = document.getElementById('analysisContent');
   var p = r.llm || {};
   var emoji = r.emotion.quadrant.split(' ')[1] || '🎧';
   var ir = r.insanityRating;
