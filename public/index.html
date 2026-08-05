@@ -161,8 +161,10 @@
       display: flex; align-items: center; gap: 0.75rem;
       padding: 0.6rem 0.75rem; border-radius: 8px;
       transition: background 0.15s;
+      cursor: pointer; text-decoration: none; color: inherit;
     }
     .track-row:hover { background: var(--c-surface); }
+    .track-row:hover .track-spotify { opacity: 1; }
     .track-row .track-num {
       width: 24px; text-align: right; color: var(--c-text2);
       font-size: 0.8rem; flex-shrink: 0;
@@ -176,6 +178,17 @@
     .track-row .track-artist { color: var(--c-text2); font-size: 0.75rem; }
     .track-row .track-album { color: var(--c-text2); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
     .track-row .track-duration { color: var(--c-text2); font-size: 0.78rem; flex-shrink: 0; }
+    .track-spotify {
+      opacity: 0; color: oklch(0.62 0.20 145); font-size: 1rem;
+      transition: opacity 0.15s; flex-shrink: 0;
+    }
+    .detail-spotify-link {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      color: oklch(0.62 0.20 145); font-size: 0.8rem;
+      text-decoration: none; margin-top: 0.4rem;
+      transition: opacity 0.15s;
+    }
+    .detail-spotify-link:hover { opacity: 0.8; }
 
     /* ═════════════════════ LOADING & STATES ═════════════════════ */
     .spinner {
@@ -671,6 +684,7 @@ function renderPlaylistDetail(playlist, tracks) {
         '<span>\u23F1\uFE0F <strong>' + formatDuration(totalDurationMs) + '</strong></span>' +
         '<span>\uD83D\uDC64 ' + esc(playlist.owner ? playlist.owner.display_name : '') + '</span>' +
       '</div>' +
+      '<a class="detail-spotify-link" href="https://open.spotify.com/playlist/' + playlist.id + '" target="_blank" rel="noopener">\uD83D\uDFE2 Avaa Spotifyssa</a>' +
     '</div>';
 
   // Render tracks
@@ -693,8 +707,10 @@ function renderTrackRow(item, index) {
   var coverUrl = imgs && imgs[2] ? imgs[2].url : (imgs && imgs[0] ? imgs[0].url : null);
   var artists = t.artists ? t.artists.map(function(a) { return a.name; }).join(', ') : 'Tuntematon';
   var album = t.album ? t.album.name : '';
+  var spotifyUrl = 'https://open.spotify.com/track/' + t.id;
 
-  return '<div class="track-row">' +
+  return '<a class="track-row" href="' + spotifyUrl + '" target="_blank" rel="noopener"' +
+    ' title="Avaa Spotifyssa: ' + esc(t.name) + '">' +
     '<span class="track-num">' + (index + 1) + '</span>' +
     (coverUrl
       ? '<img class="track-cover" src="' + coverUrl + '" alt="" loading="lazy" />'
@@ -705,7 +721,8 @@ function renderTrackRow(item, index) {
     '</div>' +
     '<div class="track-album">' + esc(album) + '</div>' +
     '<span class="track-duration">' + formatMs(t.duration_ms) + '</span>' +
-    '</div>';
+    '<span class="track-spotify">\uD83D\uDFE2</span>' +
+    '</a>';
 }
 
 function formatMs(ms) {
