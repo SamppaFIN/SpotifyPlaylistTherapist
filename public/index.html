@@ -1009,9 +1009,9 @@ async function startAnalysis() {
     var llmResult = null;
     try {
       llmResult = await callOpenRouter(currentPlaylist.name, avg, topTracks, topArtists, allTracks.length, hasAudioFeatures);
-      // Use LLM-provided values where available
-      if (llmResult.insanityRating) insanity = llmResult.insanityRating;
-      if (llmResult.playlistRating) rating = llmResult.playlistRating;
+      // Use LLM-provided values
+      if (llmResult.insanityRating != null) insanity = Number(llmResult.insanityRating);
+      if (llmResult.playlistRating != null) rating = Number(llmResult.playlistRating);
       if (llmResult.vibe) vibe = llmResult.vibe;
       if (llmResult.bigFive) {
         bigFive = {
@@ -1097,14 +1097,20 @@ function renderAnalysis(r) {
 
   // LLM Emotional State
   if (p.emotionalState) {
+    // Use LLM-provided percentages, fall back to audio averages
+    var valencePct = (p.valencePct != null) ? p.valencePct + '%' : pct(r.audio.averages.valence);
+    var energyPct = (p.energyPct != null) ? p.energyPct + '%' : pct(r.audio.averages.energy);
+    var dancePct = (p.danceabilityPct != null) ? p.danceabilityPct + '%' : pct(r.audio.averages.danceability);
+    var tempoVal = (p.tempoBpm != null) ? p.tempoBpm + ' BPM' : Math.round(r.audio.averages.tempo) + ' BPM';
+
     html += '<div class="analysis-section">' +
       '<h3>🎭 Tunnetila-analyysi</h3>' +
       '<p style="font-size:0.85rem">' + esc(p.emotionalState) + '</p>' +
       '<div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap">' +
-      '<div style="flex:1;min-width:80px;background:var(--c-bg);padding:0.5rem;border-radius:6px;text-align:center"><div style="color:var(--c-text2);font-size:0.7rem">Valence</div><div style="font-weight:700;font-size:1.1rem">' + pct(r.audio.averages.valence) + '</div></div>' +
-      '<div style="flex:1;min-width:80px;background:var(--c-bg);padding:0.5rem;border-radius:6px;text-align:center"><div style="color:var(--c-text2);font-size:0.7rem">Energy</div><div style="font-weight:700;font-size:1.1rem">' + pct(r.audio.averages.energy) + '</div></div>' +
-      '<div style="flex:1;min-width:80px;background:var(--c-bg);padding:0.5rem;border-radius:6px;text-align:center"><div style="color:var(--c-text2);font-size:0.7rem">Danceability</div><div style="font-weight:700;font-size:1.1rem">' + pct(r.audio.averages.danceability) + '</div></div>' +
-      '<div style="flex:1;min-width:80px;background:var(--c-bg);padding:0.5rem;border-radius:6px;text-align:center"><div style="color:var(--c-text2);font-size:0.7rem">Tempo</div><div style="font-weight:700;font-size:1.1rem">' + Math.round(r.audio.averages.tempo) + ' BPM</div></div>' +
+      '<div style="flex:1;min-width:80px;background:var(--c-bg);padding:0.5rem;border-radius:6px;text-align:center"><div style="color:var(--c-text2);font-size:0.7rem">Valence</div><div style="font-weight:700;font-size:1.1rem">' + valencePct + '</div></div>' +
+      '<div style="flex:1;min-width:80px;background:var(--c-bg);padding:0.5rem;border-radius:6px;text-align:center"><div style="color:var(--c-text2);font-size:0.7rem">Energy</div><div style="font-weight:700;font-size:1.1rem">' + energyPct + '</div></div>' +
+      '<div style="flex:1;min-width:80px;background:var(--c-bg);padding:0.5rem;border-radius:6px;text-align:center"><div style="color:var(--c-text2);font-size:0.7rem">Danceability</div><div style="font-weight:700;font-size:1.1rem">' + dancePct + '</div></div>' +
+      '<div style="flex:1;min-width:80px;background:var(--c-bg);padding:0.5rem;border-radius:6px;text-align:center"><div style="color:var(--c-text2);font-size:0.7rem">Tempo</div><div style="font-weight:700;font-size:1.1rem">' + tempoVal + '</div></div>' +
       '</div></div>';
   }
 
@@ -1484,20 +1490,32 @@ async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCou
     'Top-biisit:\n' +
     topTracks.map(function(t, i) { return (i+1) + '. ' + t.artist + ' — ' + t.name; }).join('\n') + '\n\n' +
     'Analysoi tämä soittolista ja sen perusteella kuuntelijan persoonallisuus. Kerro suomeksi, humoristisella ja sarkastisella tyylillä.\n\n' +
-    'VASTAA JSON:\n' +
+    'TÄRKEÄÄ: Älä käytä mitään oletusarvoja. Jokaisen numeron ja arvion on perustuttava juuri TÄMÄN soittolistan biiseihin ja artisteihin.\n\n' +
+    'VASTAA JSON (korvaa jokainen selite ja numero omalla analyysilläsi):\n' +
     '{\n' +
     '  "headline": "räväkkä otsikko (max 10 sanaa)",\n' +
     '  "emotionalState": "tunnetila-analyysi (2-3 lausetta)",\n' +
     '  "personality": "persoonallisuusanalyysi (2-3 lausetta)",\n' +
     '  "obsessiveThemes": "pakkomielteet ja toistuvat teemat (1-2 lausetta)",\n' +
     '  "freudianDiagnosis": "freudilainen diagnoosi (1-2 lausetta)",\n' +
-    '  "freudianStage": "mihin Freudin psykoseksuaaliseen kehitysvaiheeseen kuuntelija on jäänyt",\n' +
-    '  "adjectives": ["adjektiivi1", "adjektiivi2", "adjektiivi3"],\n' +
-    '  "insanityRating": 42,\n' +
-    '  "playlistRating": 7,\n' +
-    '  "recommendation": "suositus kenelle tai mihin tilanteeseen soittolista sopii",\n' +
+    '  "freudianStage": "Freudin psykoseksuaalinen kehitysvaihe johon jäänyt",\n' +
+    '  "adjectives": ["sana1", "sana2", "sana3"],\n' +
+    '  "insanityRating": 0-100 LUKUNA,\n' +
+    '  "playlistRating": 1-10 LUKUNA,\n' +
+    '  "recommendation": "suositus kenelle tai mihin tilanteeseen",\n' +
+    '  "valencePct": 0-100 LUKUNA (positiivisuusprosentti),\n' +
+    '  "energyPct": 0-100 LUKUNA (energisyysprosentti),\n' +
+    '  "danceabilityPct": 0-100 LUKUNA (tanssittavuusprosentti),\n' +
+    '  "tempoBpm": BPM-LUKUNA (arvioitu tempo),\n' +
     '  "vibe": {"primaryMood": "...", "energyLevel": "...", "danceabilityLevel": "...", "playlistType": "...", "keyMood": "...", "tempoLabel": "..."},\n' +
-    '  "bigFive": {"openness": 0.5, "conscientiousness": 0.5, "extraversion": 0.5, "agreeableness": 0.5, "neuroticism": 0.5, "opennessLabel": "...", "conscientiousnessLabel": "...", "extraversionLabel": "...", "agreeablenessLabel": "...", "neuroticismLabel": "..."}\n' +
+    '  "bigFive": {\n' +
+    '    "openness": 0.0-1.0 LUKUNA, "conscientiousness": 0.0-1.0 LUKUNA,\n' +
+    '    "extraversion": 0.0-1.0 LUKUNA, "agreeableness": 0.0-1.0 LUKUNA,\n' +
+    '    "neuroticism": 0.0-1.0 LUKUNA,\n' +
+    '    "opennessLabel": "kuvaus (esim. äärimmäisen avoin tai sulkeutunut)",\n' +
+    '    "conscientiousnessLabel": "kuvaus", "extraversionLabel": "kuvaus",\n' +
+    '    "agreeablenessLabel": "kuvaus", "neuroticismLabel": "kuvaus"\n' +
+    '  }\n' +
     '}';
 
   var res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -1512,7 +1530,7 @@ async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCou
         { role: 'user', content: prompt }
       ],
       temperature: 0.9,
-      max_tokens: 600,
+      max_tokens: 800,
     }),
   });
 
