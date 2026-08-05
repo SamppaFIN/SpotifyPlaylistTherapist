@@ -1490,31 +1490,32 @@ async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCou
     'Top-biisit:\n' +
     topTracks.map(function(t, i) { return (i+1) + '. ' + t.artist + ' — ' + t.name; }).join('\n') + '\n\n' +
     'Analysoi tämä soittolista ja sen perusteella kuuntelijan persoonallisuus. Kerro suomeksi, humoristisella ja sarkastisella tyylillä.\n\n' +
-    'TÄRKEÄÄ: Älä käytä mitään oletusarvoja. Jokaisen numeron ja arvion on perustuttava juuri TÄMÄN soittolistan biiseihin ja artisteihin.\n\n' +
-    'VASTAA JSON (korvaa jokainen selite ja numero omalla analyysilläsi):\n' +
+    'TÄRKEÄÄ: Jokaisen numeroarvon täytyy perustua juuri TÄMÄN soittolistan biiseihin ja artisteihin. ÄLÄ KÄYTÄ MITÄÄN OLETUSARVOJA. Arvioi oikeasti:\n' +
+    '- insanityRating: 0-100, missä 0=täysin terve, 100=täysin hullu. ÄLÄ laita 42!\n' +
+    '- playlistRating: 1-10\n' +
+    '- valencePct, energyPct, danceabilityPct: 0-100\n' +
+    '- tempoBpm: arvioitu BPM\n' +
+    '- bigFive: jokainen 0.0-1.0, EI SAA OLLA 0.5! Arvioi artistien perusteella.\n\n' +
+    'VASTAA JSON:\n' +
     '{\n' +
-    '  "headline": "räväkkä otsikko (max 10 sanaa)",\n' +
-    '  "emotionalState": "tunnetila-analyysi (2-3 lausetta)",\n' +
-    '  "personality": "persoonallisuusanalyysi (2-3 lausetta)",\n' +
-    '  "obsessiveThemes": "pakkomielteet ja toistuvat teemat (1-2 lausetta)",\n' +
-    '  "freudianDiagnosis": "freudilainen diagnoosi (1-2 lausetta)",\n' +
-    '  "freudianStage": "Freudin psykoseksuaalinen kehitysvaihe johon jäänyt",\n' +
-    '  "adjectives": ["sana1", "sana2", "sana3"],\n' +
-    '  "insanityRating": 0-100 LUKUNA,\n' +
-    '  "playlistRating": 1-10 LUKUNA,\n' +
-    '  "recommendation": "suositus kenelle tai mihin tilanteeseen",\n' +
-    '  "valencePct": 0-100 LUKUNA (positiivisuusprosentti),\n' +
-    '  "energyPct": 0-100 LUKUNA (energisyysprosentti),\n' +
-    '  "danceabilityPct": 0-100 LUKUNA (tanssittavuusprosentti),\n' +
-    '  "tempoBpm": BPM-LUKUNA (arvioitu tempo),\n' +
-    '  "vibe": {"primaryMood": "...", "energyLevel": "...", "danceabilityLevel": "...", "playlistType": "...", "keyMood": "...", "tempoLabel": "..."},\n' +
+    '  "headline": "...",\n' +
+    '  "emotionalState": "...",\n' +
+    '  "personality": "...",\n' +
+    '  "obsessiveThemes": "...",\n' +
+    '  "freudianDiagnosis": "...",\n' +
+    '  "freudianStage": "...",\n' +
+    '  "adjectives": ["...","...","..."],\n' +
+    '  "insanityRating": LUKU,\n' +
+    '  "playlistRating": LUKU,\n' +
+    '  "recommendation": "...",\n' +
+    '  "valencePct": LUKU,\n' +
+    '  "energyPct": LUKU,\n' +
+    '  "danceabilityPct": LUKU,\n' +
+    '  "tempoBpm": LUKU,\n' +
+    '  "vibe": {"primaryMood":"...","energyLevel":"...","danceabilityLevel":"...","playlistType":"...","keyMood":"...","tempoLabel":"..."},\n' +
     '  "bigFive": {\n' +
-    '    "openness": 0.0-1.0 LUKUNA, "conscientiousness": 0.0-1.0 LUKUNA,\n' +
-    '    "extraversion": 0.0-1.0 LUKUNA, "agreeableness": 0.0-1.0 LUKUNA,\n' +
-    '    "neuroticism": 0.0-1.0 LUKUNA,\n' +
-    '    "opennessLabel": "kuvaus (esim. äärimmäisen avoin tai sulkeutunut)",\n' +
-    '    "conscientiousnessLabel": "kuvaus", "extraversionLabel": "kuvaus",\n' +
-    '    "agreeablenessLabel": "kuvaus", "neuroticismLabel": "kuvaus"\n' +
+    '    "openness": LUKU,"conscientiousness": LUKU,"extraversion": LUKU,"agreeableness": LUKU,"neuroticism": LUKU,\n' +
+    '    "opennessLabel":"...","conscientiousnessLabel":"...","extraversionLabel":"...","agreeablenessLabel":"...","neuroticismLabel":"..."\n' +
     '  }\n' +
     '}';
 
@@ -1530,7 +1531,7 @@ async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCou
         { role: 'user', content: prompt }
       ],
       temperature: 0.9,
-      max_tokens: 800,
+      max_tokens: 1000,
     }),
   });
 
