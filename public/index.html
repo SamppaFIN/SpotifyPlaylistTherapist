@@ -623,7 +623,7 @@ function filterPlaylists() {
 
 function renderPlaylistCard(p) {
   var imageUrl = p.images && p.images[0] ? p.images[0].url : null;
-  var trackCount = p.tracks ? p.tracks.total : 0;
+  var trackCount = (p.tracks && p.tracks.total) || (p.items && p.items.total) || 0;
   var ownerName = p.owner ? p.owner.display_name : '';
 
   var coverHtml = imageUrl
@@ -740,7 +740,7 @@ async function openPlaylist(playlistId) {
     var offset = 0;
     var limit = 100;
     var allTrackItems = [];
-    var totalTracks = playlist.tracks ? playlist.tracks.total : 0;
+    var totalTracks = (playlist.tracks && playlist.tracks.total) || (playlist.items && playlist.items.total) || 0;
 
     while (true) {
       var progress = totalTracks > 0 ? Math.round((allTrackItems.length / totalTracks) * 100) : 50;
