@@ -25,9 +25,9 @@
 ```json
 {
   "projekti": "SpotifyPlaylistTherapist",
-  "versio": "0.1.0-MVP",
-  "kuvaus": "Hae Spotify-soittolista ja tee sen biiseistä psykoanalyysi — tunnetilat, persoonallisuuspiirteet, teemat.",
-  "tila": "demo_valmis"
+  "versio": "0.2.0",
+  "kuvaus": "Landing page — selaa kaikki Spotify-soittolistasi ja niiden biisit. Analyysit rakennetaan myöhemmin tämän päälle.",
+  "tila": "landing_page_valmis"
 }
 ```
 
@@ -38,6 +38,12 @@
 ```json
 {
   "epicit": [
+    {
+      "id": "landing",
+      "nimi": "🏠 Landing Page — Soittolistaselain",
+      "tiketit": [8, 9, 10],
+      "valmius": 100
+    },
     {
       "id": "perusta",
       "nimi": "📡 Data Foundation — Spotify API",
@@ -64,6 +70,54 @@
     }
   ],
   "tiketit": [
+    {
+      "id": 8,
+      "epic": "landing",
+      "nimi": "Landing page — UI & design (OKLCH, responsive, no framework)",
+      "effort": "M",
+      "riippuvuudet": [],
+      "status": "done",
+      "user_story": "Käyttäjänä haluan nähdä selkeän etusivun josta voin kirjautua Spotifyhin ja selata soittolistojani.",
+      "acceptance_criteria": [
+        "Single-file HTML/CSS/JS ilman build-steppiä",
+        "OKLCH-värit, clamp-typografia, mobiiliresponsiivinen",
+        "Header + logo, kirjautumistila"
+      ],
+      "valmius": 100
+    },
+    {
+      "id": 9,
+      "epic": "landing",
+      "nimi": "Soittolistojen haku & grid-näkymä",
+      "effort": "M",
+      "riippuvuudet": [1, 8],
+      "status": "done",
+      "user_story": "Käyttäjänä haluan nähdä KAIKKI soittolistani grid-näkymässä (kansikuva, nimi, biisimäärä), ja suodattaa niitä hakusanalla.",
+      "acceptance_criteria": [
+        "Kaikki soittolistat haetaan (pagination, rate limit kunnioittaen)",
+        "Grid-näkymä: kansikuva, nimi, biisimäärä, omistaja",
+        "Hakukenttä suodatukseen (nimi + kuvaus)",
+        "Tyhjä tila jos ei soittolistoja"
+      ],
+      "valmius": 100
+    },
+    {
+      "id": 10,
+      "epic": "landing",
+      "nimi": "Soittolistan biisien listaus (detail-näkymä)",
+      "effort": "M",
+      "riippuvuudet": [2, 9],
+      "status": "done",
+      "user_story": "Käyttäjänä haluan klikata soittolistaa ja nähdä sen KAIKKI biisit (nimi, artisti, albumi, kesto) siistinä listana.",
+      "acceptance_criteria": [
+        "Kaikki biisit haetaan (pagination, 100 kpl / sivu)",
+        "Detail-näkymä: kansikuva, nimi, kuvaus, biisimäärä, kokonaiskesto",
+        "Biisilista: järjestysnumero, albumin kansi, nimi, artisti, albumi, kesto",
+        "Edistymispalkki latauksen aikana",
+        "Takaisin-painike soittolistoihin"
+      ],
+      "valmius": 100
+    },
     {
       "id": 1,
       "epic": "perusta",
@@ -219,7 +273,8 @@ SpotifyPlaylistTherapist/
 ├── .gitignore             # node_modules, dist, .env, *.log
 ├── README.md
 ├── public/                # GitHub Pages -juuri
-│   └── demo.html          # Single-file SPA (FALLBACK-data sisällä)
+│   ├── index.html         # 🆕 Landing page — soittolistaselain
+│   └── demo.html          # Vanha psykoanalyysi-demo (FALLBACK-data)
 ├── src/                   # Tuotantokoodi (TypeScript)
 │   ├── spotify/           # Spotify API -integraatio
 │   │   ├── auth.ts        # OAuth 2.0 PKCE flow
@@ -232,6 +287,8 @@ SpotifyPlaylistTherapist/
 │   ├── engine/            # Datan prosessointi
 │   │   └── report.ts      # Raportin generointi
 │   └── __tests__/         # Unit-testit
+├── demo/
+│   └── server.ts          # Express-palvelin (staattiset + Spotify-proxy)
 └── .github/workflows/     # CI/CD
     └── pages.yml          # GitHub Pages deploy
 ```

@@ -2,10 +2,933 @@
 <html lang="fi">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0;url=demo.html">
-  <title>🎧 SpotifyPlaylistTherapist</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎧 Psyko — Soittolistasi</title>
+  <style>
+    /* ═════════════════════ DESIGN SYSTEM ═════════════════ */
+    :root {
+      --c-bg: oklch(0.10 0.02 260);
+      --c-surface: oklch(0.15 0.02 260);
+      --c-surface2: oklch(0.20 0.02 260);
+      --c-text: oklch(0.90 0.01 260);
+      --c-text2: oklch(0.62 0.02 260);
+      --c-accent: oklch(0.62 0.20 240);
+      --c-accent2: oklch(0.55 0.22 300);
+      --c-success: oklch(0.62 0.20 145);
+      --c-danger: oklch(0.52 0.22 25);
+      --c-warning: oklch(0.70 0.18 85);
+      --touch-target: 44px;
+      --radius: 12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: clamp(14px, 2.5vw, 18px); }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--c-bg);
+      color: var(--c-text);
+      min-height: 100dvh;
+      line-height: 1.5;
+    }
+
+    /* ═════════════════════ HEADER ═════════════════════ */
+    header {
+      position: sticky; top: 0; z-index: 10;
+      backdrop-filter: blur(16px);
+      background: oklch(0.10 0.02 260 / 0.85);
+      border-bottom: 1px solid oklch(1 0 0 / 0.08);
+      padding: 0.75rem 1rem;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem;
+    }
+    .logo { font-size: 1.2rem; font-weight: 700; white-space: nowrap; }
+    .logo span { color: var(--c-accent); }
+    .header-user {
+      display: flex; align-items: center; gap: 0.75rem;
+      font-size: 0.8rem; color: var(--c-text2);
+    }
+    .header-user img {
+      width: 28px; height: 28px; border-radius: 50%;
+      object-fit: cover; background: var(--c-surface2);
+    }
+
+    /* ═════════════════════ BUTTONS ═════════════════════ */
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.6rem 1.2rem;
+      border: none; border-radius: var(--radius);
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+      min-height: var(--touch-target);
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary { background: var(--c-accent); color: #fff; }
+    .btn-outline { background: transparent; border: 1.5px solid var(--c-surface2); color: var(--c-text); }
+    .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; min-height: 32px; }
+    .btn:disabled { opacity: 0.4; pointer-events: none; }
+
+    /* ═════════════════════ LAYOUT ═════════════════════ */
+    main { max-width: 960px; margin: 0 auto; padding: 1rem; }
+
+    /* ═════════════════════ VIEWS ═════════════════════ */
+    .view { display: none; }
+    .view.active { display: block; animation: fadeIn 0.3s ease; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ═════════════════════ LANDING / LOGIN ═════════════════════ */
+    .hero {
+      text-align: center; padding: 4rem 1rem 2rem;
+    }
+    .hero .emoji-big { font-size: 4rem; display: block; margin-bottom: 1rem; }
+    .hero h1 { font-size: clamp(1.8rem, 5vw, 2.5rem); margin-bottom: 0.75rem; }
+    .hero p { color: var(--c-text2); max-width: 500px; margin: 0 auto 1.5rem; }
+    .login-card {
+      max-width: 420px; margin: 1rem auto; text-align: left;
+      background: var(--c-surface); border-radius: var(--radius); padding: 1.25rem;
+    }
+    .login-card label { font-size: 0.8rem; color: var(--c-text2); }
+    .login-card input {
+      width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px;
+      border: 1.5px solid var(--c-surface2); background: var(--c-bg);
+      color: var(--c-text); font-size: 0.85rem; margin-top: 0.25rem;
+    }
+    .login-card .hint { font-size: 0.7rem; color: var(--c-text2); margin-top: 0.3rem; }
+    .login-card .hint a { color: var(--c-accent); }
+
+    /* ═════════════════════ PLAYLIST GRID ═════════════════════ */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;
+    }
+    .section-header h2 { font-size: 1.2rem; }
+    .playlist-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.75rem;
+    }
+    .playlist-card {
+      background: var(--c-surface); border-radius: var(--radius);
+      padding: 0.75rem; cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s;
+    }
+    .playlist-card:hover, .playlist-card:focus-visible {
+      border-color: var(--c-accent); background: var(--c-surface2);
+      transform: translateY(-2px);
+    }
+    .playlist-card .cover {
+      width: 100%; aspect-ratio: 1; object-fit: cover;
+      border-radius: 6px; margin-bottom: 0.5rem; background: var(--c-surface2);
+    }
+    .playlist-card .cover-placeholder {
+      width: 100%; aspect-ratio: 1; border-radius: 6px; margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--c-surface2), oklch(0.25 0.04 260));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem;
+    }
+    .playlist-card .pl-name { font-weight: 600; font-size: 0.85rem; line-height: 1.2; }
+    .playlist-card .pl-meta { color: var(--c-text2); font-size: 0.72rem; margin-top: 0.2rem; }
+    .playlist-card .pl-owner { color: var(--c-text2); font-size: 0.7rem; }
+
+    /* ═════════════════════ PLAYLIST DETAIL ═════════════════════ */
+    .detail-header {
+      display: flex; gap: 1rem; align-items: flex-end;
+      margin-bottom: 1.5rem; flex-wrap: wrap;
+    }
+    .detail-cover {
+      width: 180px; height: 180px; border-radius: var(--radius);
+      object-fit: cover; background: var(--c-surface2); flex-shrink: 0;
+    }
+    .detail-cover-placeholder {
+      width: 180px; height: 180px; border-radius: var(--radius); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--c-surface2), oklch(0.25 0.04 260));
+      display: flex; align-items: center; justify-content: center; font-size: 4rem;
+    }
+    .detail-info { flex: 1; min-width: 200px; }
+    .detail-info h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .detail-info .desc { color: var(--c-text2); font-size: 0.85rem; margin-bottom: 0.5rem; }
+    .detail-info .stats { color: var(--c-text2); font-size: 0.8rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+    .detail-info .stats span { white-space: nowrap; }
+    .detail-back { margin-bottom: 0.75rem; }
+
+    /* ═════════════════════ TRACK LIST ═════════════════════ */
+    .track-list { display: flex; flex-direction: column; }
+    .track-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.6rem 0.75rem; border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .track-row:hover { background: var(--c-surface); }
+    .track-row .track-num {
+      width: 24px; text-align: right; color: var(--c-text2);
+      font-size: 0.8rem; flex-shrink: 0;
+    }
+    .track-row .track-cover {
+      width: 40px; height: 40px; border-radius: 4px;
+      object-fit: cover; background: var(--c-surface2); flex-shrink: 0;
+    }
+    .track-row .track-info { flex: 1; min-width: 0; }
+    .track-row .track-name { font-weight: 600; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .track-row .track-artist { color: var(--c-text2); font-size: 0.75rem; }
+    .track-row .track-album { color: var(--c-text2); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+    .track-row .track-duration { color: var(--c-text2); font-size: 0.78rem; flex-shrink: 0; }
+
+    /* ═════════════════════ LOADING & STATES ═════════════════════ */
+    .spinner {
+      width: 40px; height: 40px; border: 3px solid var(--c-surface2);
+      border-top-color: var(--c-accent); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 2rem auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--c-text2); }
+    .empty-state .icon { font-size: 3rem; display: block; margin-bottom: 0.5rem; }
+    .progress-bar-wrap {
+      height: 4px; background: var(--c-surface2); border-radius: 2px;
+      margin: 0.75rem 0; overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%; background: var(--c-accent);
+      border-radius: 2px; transition: width 0.3s ease;
+    }
+
+    /* ═════════════════════ STATUS BANNER ═════════════════════ */
+    .banner {
+      padding: 0.75rem 1rem; border-radius: var(--radius);
+      margin-bottom: 1rem; font-size: 0.85rem;
+    }
+    .banner-success { background: oklch(0.20 0.04 145 / 0.3); border-left: 3px solid var(--c-success); }
+    .banner-error { background: oklch(0.20 0.04 25 / 0.3); border-left: 3px solid var(--c-danger); }
+    .banner-info { background: oklch(0.20 0.04 240 / 0.3); border-left: 3px solid var(--c-accent); }
+
+    /* ═════════════════════ SEARCH / FILTER ═════════════════════ */
+    .search-input {
+      width: 100%; padding: 0.6rem 0.9rem; border-radius: var(--radius);
+      border: 1.5px solid var(--c-surface2); background: var(--c-surface);
+      color: var(--c-text); font-size: 0.9rem; margin-bottom: 1rem;
+    }
+    .search-input:focus { outline: none; border-color: var(--c-accent); }
+
+    /* ═════════════════════ RESPONSIVE ═════════════════════ */
+    @media (max-width: 600px) {
+      .playlist-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+      .detail-header { flex-direction: column; align-items: center; text-align: center; }
+      .detail-cover, .detail-cover-placeholder { width: 140px; height: 140px; }
+      .detail-info .stats { justify-content: center; }
+      .track-row .track-album { display: none; }
+      header { padding: 0.5rem 0.75rem; }
+      .logo { font-size: 1.1rem; }
+    }
+  </style>
 </head>
 <body>
-  <p>Ohjataan demo-sivulle... <a href="demo.html">Klikkaa tästä</a> jos et ohjaudu automaattisesti.</p>
+
+<header>
+  <div class="logo">🎧 <span>Psyko</span></div>
+  <div id="headerRight" class="header-user">
+    <span style="color:var(--c-text2);font-size:0.8rem">Ei kirjautunut</span>
+  </div>
+</header>
+
+<main>
+  <!-- VIEW: LOGIN -->
+  <div class="view active" id="view-login">
+    <div class="hero">
+      <span class="emoji-big">🎧</span>
+      <h1>Mitä soittolistasi kertovat sinusta?</h1>
+      <p>Liitä Spotify ja selaa kaikkia soittolistojasi. Psyko auttaa ymmärtämään musiikkiasi — analyysi tulossa myöhemmin.</p>
+
+      <div class="login-card">
+        <label>1️⃣ Spotify Client ID</label>
+        <div style="display:flex;gap:0.5rem;margin-top:0.25rem">
+          <input type="text" id="clientIdInput" placeholder="52ad6316..." style="flex:1" />
+          <button class="btn btn-sm btn-outline" onclick="saveClientId()" style="white-space:nowrap">💾 Tallenna</button>
+        </div>
+        <p class="hint">
+          <a href="https://developer.spotify.com/dashboard" target="_blank">Luo Client ID</a> —
+          Redirect URI: <code id="redirectUriDisplay"></code>
+        </p>
+      </div>
+
+      <div class="login-card">
+        <label>2️⃣ Kirjaudu Spotifyhin</label>
+        <div id="spotifyStatus" style="margin-top:0.25rem">
+          <button class="btn btn-primary" onclick="spotifyLogin()">
+            🎵 Kirjaudu Spotifyhin
+          </button>
+        </div>
+        <p class="hint" id="spotifyStatusText">
+          Kirjaudu nähdäksesi soittolistasi.
+        </p>
+      </div>
+
+      <p style="margin-top:1.5rem;color:var(--c-text2);font-size:0.8rem;text-align:center;max-width:420px;margin-left:auto;margin-right:auto">
+        🔒 Kaikki tapahtuu selaimessasi. Tokenit säilytetään vain sinun koneellasi.<br>
+        Soittolistojen <strong>ei tarvitse olla julkisia</strong> — kirjaudut omilla Spotify-tunnuksillasi.
+      </p>
+      <p style="margin-top:2rem;color:var(--c-text2);font-size:0.75rem;text-align:center">
+        🧪 Kokeile myös <a href="demo.html" style="color:var(--c-accent2)">psykoanalyysi-demoa</a> (aiempi versio)
+      </p>
+    </div>
+    <div id="loginMessage"></div>
+  </div>
+
+  <!-- VIEW: LOADING -->
+  <div class="view" id="view-loading">
+    <div style="text-align:center;padding:3rem 1rem">
+      <div class="spinner"></div>
+      <p style="margin-top:1rem;color:var(--c-text2)" id="loadingText">Ladataan...</p>
+      <div class="progress-bar-wrap" style="max-width:300px;margin:1rem auto">
+        <div class="progress-bar-fill" id="loadingProgress" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW: PLAYLISTS (grid) -->
+  <div class="view" id="view-playlists">
+    <div class="section-header">
+      <h2>📋 Soittolistasi</h2>
+      <span style="color:var(--c-text2);font-size:0.85rem" id="playlistCount"></span>
+    </div>
+    <input type="text" class="search-input" id="playlistSearch" placeholder="🔍 Suodata soittolistoja..." oninput="filterPlaylists()" />
+    <div class="playlist-grid" id="playlistGrid"></div>
+    <div class="empty-state" id="playlistEmpty" style="display:none">
+      <span class="icon">📭</span>
+      <p>Ei soittolistoja löytynyt.</p>
+      <p style="font-size:0.8rem">Kokeile eri hakusanaa.</p>
+    </div>
+  </div>
+
+  <!-- VIEW: PLAYLIST DETAIL (tracks) -->
+  <div class="view" id="view-playlist-detail">
+    <div class="detail-back">
+      <button class="btn btn-outline btn-sm" onclick="goToPlaylists()">← Takaisin soittolistoihin</button>
+    </div>
+    <div class="detail-header" id="detailHeader"></div>
+
+    <div class="progress-bar-wrap" id="trackProgressWrap" style="display:none">
+      <div class="progress-bar-fill" id="trackProgressFill" style="width:0%"></div>
+    </div>
+
+    <div class="track-list" id="trackList"></div>
+    <div class="empty-state" id="trackEmpty" style="display:none">
+      <span class="icon">🎵</span>
+      <p>Ei biisejä tässä soittolistassa.</p>
+    </div>
+  </div>
+</main>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONFIG & CONSTANTS
+// ═══════════════════════════════════════════════════════════
+
+const REDIRECT_URI = window.location.origin + window.location.pathname;
+const SPOTIFY_API = 'https://api.spotify.com/v1';
+const SPOTIFY_AUTH = 'https://accounts.spotify.com';
+const SCOPES = 'playlist-read-private playlist-read-collaborative user-read-private user-read-email';
+const DEFAULT_CLIENT_ID = '52ad63161c934c75ba145d6ab53e2275';
+
+document.getElementById('redirectUriDisplay').textContent = REDIRECT_URI;
+
+// ═══════════════════════════════════════════════════════════
+// APP STATE
+// ═══════════════════════════════════════════════════════════
+
+let currentView = 'login';
+let allPlaylists = [];
+let currentPlaylist = null;
+let allTracks = [];
+
+// ═══════════════════════════════════════════════════════════
+// CLIENT ID MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+
+function getClientId() {
+  return localStorage.getItem('spotify_client_id') || DEFAULT_CLIENT_ID;
+}
+
+function saveClientId() {
+  var input = document.getElementById('clientIdInput');
+  var id = input.value.trim();
+  if (id) {
+    localStorage.setItem('spotify_client_id', id);
+    input.style.borderColor = 'var(--c-success)';
+    setTimeout(function() { input.style.borderColor = 'var(--c-surface2)'; }, 2000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SPOTIFY OAuth PKCE
+// ═══════════════════════════════════════════════════════════
+
+function generateRandomString(length) {
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  var arr = new Uint8Array(length);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, function(b) { return chars[b % chars.length]; }).join('');
+}
+
+function sha256(plain) {
+  var encoder = new TextEncoder();
+  return crypto.subtle.digest('SHA-256', encoder.encode(plain));
+}
+
+function base64url(buffer) {
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function getStoredTokens() {
+  try { return JSON.parse(localStorage.getItem('spotify_tokens')); } catch(e) { return null; }
+}
+
+function saveTokens(tokens) {
+  localStorage.setItem('spotify_tokens', JSON.stringify(tokens));
+}
+
+async function spotifyLogin() {
+  var clientId = getClientId();
+  var verifier = generateRandomString(64);
+  var challenge = base64url(await sha256(verifier));
+  localStorage.setItem('spotify_code_verifier', verifier);
+
+  var params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    redirect_uri: REDIRECT_URI,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    scope: SCOPES,
+    show_dialog: 'true',
+  });
+  window.location.href = SPOTIFY_AUTH + '/authorize?' + params.toString();
+}
+
+async function handleSpotifyCallback() {
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('code');
+  var error = params.get('error');
+  if (error) { showMessage('login', 'Kirjautuminen epäonnistui: ' + error, 'error'); return false; }
+  if (!code) return false;
+
+  var verifier = localStorage.getItem('spotify_code_verifier');
+  if (!verifier) { showMessage('login', 'Kirjautumisvirhe — kokeile uudelleen.', 'error'); return false; }
+
+  var clientId = getClientId();
+  var res = await fetch(SPOTIFY_AUTH + '/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code', code: code,
+      redirect_uri: REDIRECT_URI, client_id: clientId,
+      code_verifier: verifier,
+    }),
+  });
+
+  if (!res.ok) { showMessage('login', 'Token-vaihto epäonnistui (' + res.status + ')', 'error'); return false; }
+
+  var data = await res.json();
+  saveTokens({
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: Date.now() + data.expires_in * 1000,
+    scope: data.scope || '',
+  });
+  localStorage.removeItem('spotify_code_verifier');
+  window.history.replaceState({}, '', REDIRECT_URI);
+  return true;
+}
+
+async function getValidToken(forceRefresh) {
+  var tokens = getStoredTokens();
+  if (!tokens) return null;
+
+  if (!forceRefresh && Date.now() < tokens.expires_at) {
+    return tokens.access_token;
+  }
+
+  console.log('\u{1F504} Refreshaan Spotify-tokenia...');
+  var clientId = getClientId();
+  try {
+    var res = await fetch(SPOTIFY_AUTH + '/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: tokens.refresh_token,
+        client_id: clientId,
+      }),
+    });
+    if (!res.ok) { console.warn('\u26A0\uFE0F Tokenin refresh epäonnistui:', res.status); return null; }
+    var data = await res.json();
+    var newTokens = {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token || tokens.refresh_token,
+      expires_at: Date.now() + (data.expires_in || 3600) * 1000,
+    };
+    saveTokens(newTokens);
+    return newTokens.access_token;
+  } catch(err) {
+    console.warn('\u26A0\uFE0F Verkkovirhe token-refreshissä:', err);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SPOTIFY API HELPERS
+// ═══════════════════════════════════════════════════════════
+
+async function spotifyFetch(path, retry) {
+  if (retry === undefined) retry = true;
+  var token = await getValidToken();
+  if (!token) return null;
+
+  var res = await fetch(SPOTIFY_API + path, {
+    headers: { Authorization: 'Bearer ' + token, 'Accept': 'application/json' },
+  });
+
+  if (res.status === 401 && retry) {
+    var newToken = await getValidToken(true);
+    if (newToken) {
+      var retryRes = await fetch(SPOTIFY_API + path, {
+        headers: { Authorization: 'Bearer ' + newToken, 'Accept': 'application/json' },
+      });
+      if (retryRes.ok) return retryRes.json();
+    }
+    return null;
+  }
+
+  if (!res.ok) {
+    console.warn('\u26A0\uFE0F Spotify API ' + res.status + ': ' + path);
+    return { _error: res.status };
+  }
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════════════
+// DATA FETCHING
+// ═══════════════════════════════════════════════════════════
+
+async function fetchAllMyPlaylists() {
+  var all = [];
+  var offset = 0;
+  var limit = 50;
+
+  while (true) {
+    var page = await spotifyFetch('/me/playlists?limit=' + limit + '&offset=' + offset);
+    if (!page || page._error) break;
+
+    all.push.apply(all, page.items);
+
+    if (!page.next) break;
+    offset += limit;
+    await sleep(50);
+  }
+
+  return all;
+}
+
+async function fetchAllPlaylistTracks(playlistId) {
+  var all = [];
+  var url = '/playlists/' + playlistId + '/tracks?limit=100';
+
+  while (url) {
+    // url may be absolute – strip API base
+    var path = url.replace(SPOTIFY_API, '');
+    var page = await spotifyFetch(path);
+    if (!page || page._error) break;
+
+    var validTracks = page.items.filter(function(i) { return i.track; });
+    all.push.apply(all, validTracks);
+
+    if (!page.next) break;
+    url = page.next;
+    await sleep(50);
+  }
+
+  return all;
+}
+
+async function fetchProfile() {
+  return spotifyFetch('/me');
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEW NAVIGATION
+// ═══════════════════════════════════════════════════════════
+
+function showView(viewId) {
+  var views = document.querySelectorAll('.view');
+  for (var i = 0; i < views.length; i++) {
+    views[i].classList.remove('active');
+  }
+  var view = document.getElementById('view-' + viewId);
+  if (view) view.classList.add('active');
+  currentView = viewId;
+}
+
+function showMessage(viewId, text, type) {
+  var el = document.getElementById(viewId + 'Message');
+  if (!el) return;
+  el.style.display = 'block';
+  var cls = type === 'error' ? 'banner-error' : type === 'success' ? 'banner-success' : 'banner-info';
+  el.innerHTML = '<div class="banner ' + cls + '">' + text + '</div>';
+}
+
+function showLoading(text) {
+  document.getElementById('loadingText').textContent = text || 'Ladataan...';
+  document.getElementById('loadingProgress').style.width = '0%';
+  showView('loading');
+}
+
+function setLoadingProgress(pct, text) {
+  document.getElementById('loadingProgress').style.width = Math.min(100, pct) + '%';
+  if (text) document.getElementById('loadingText').textContent = text;
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEW: PLAYLISTS GRID
+// ═══════════════════════════════════════════════════════════
+
+function renderPlaylists(playlists) {
+  allPlaylists = playlists;
+  document.getElementById('playlistCount').textContent = playlists.length + ' soittolistaa';
+  filterPlaylists();
+}
+
+function filterPlaylists() {
+  var query = document.getElementById('playlistSearch').value.toLowerCase();
+  var filtered = query
+    ? allPlaylists.filter(function(p) {
+        return p.name.toLowerCase().indexOf(query) !== -1 ||
+               (p.description || '').toLowerCase().indexOf(query) !== -1;
+      })
+    : allPlaylists;
+
+  var grid = document.getElementById('playlistGrid');
+  var empty = document.getElementById('playlistEmpty');
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    grid.innerHTML = filtered.map(renderPlaylistCard).join('');
+  }
+}
+
+function renderPlaylistCard(p) {
+  var imageUrl = p.images && p.images[0] ? p.images[0].url : null;
+  var trackCount = p.tracks ? p.tracks.total : 0;
+  var ownerName = p.owner ? p.owner.display_name : '';
+
+  var coverHtml = imageUrl
+    ? '<img class="cover" src="' + imageUrl + '" alt="' + esc(p.name) + '" loading="lazy" />'
+    : '<div class="cover-placeholder">\uD83C\uDFB5</div>';
+
+  return '<div class="playlist-card" onclick="openPlaylist(\'' + esc(p.id) + '\')" tabindex="0"' +
+    ' onkeydown="if(event.key===\'Enter\')openPlaylist(\'' + esc(p.id) + '\')"' +
+    ' title="' + esc(p.name) + ' — ' + trackCount + ' biisiä">' +
+    coverHtml +
+    '<div class="pl-name">' + esc(p.name) + '</div>' +
+    '<div class="pl-meta">' + trackCount + ' biisiä</div>' +
+    (ownerName ? '<div class="pl-owner">' + esc(ownerName) + '</div>' : '') +
+    '</div>';
+}
+
+function esc(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEW: PLAYLIST DETAIL (tracks)
+// ═══════════════════════════════════════════════════════════
+
+function renderPlaylistDetail(playlist, tracks) {
+  currentPlaylist = playlist;
+  allTracks = tracks;
+
+  var imageUrl = playlist.images && playlist.images[0] ? playlist.images[0].url : null;
+  var totalDurationMs = tracks.reduce(function(s, t) { return s + (t.track ? (t.track.duration_ms || 0) : 0); }, 0);
+
+  // Render header
+  var header = document.getElementById('detailHeader');
+  header.innerHTML =
+    (imageUrl
+      ? '<img class="detail-cover" src="' + imageUrl + '" alt="' + esc(playlist.name) + '" />'
+      : '<div class="detail-cover-placeholder">\uD83C\uDFB5</div>') +
+    '<div class="detail-info">' +
+      '<h1>' + esc(playlist.name) + '</h1>' +
+      (playlist.description ? '<p class="desc">' + esc(playlist.description) + '</p>' : '') +
+      '<div class="stats">' +
+        '<span>\uD83C\uDFB5 <strong>' + tracks.length + '</strong> biisiä</span>' +
+        '<span>\u23F1\uFE0F <strong>' + formatDuration(totalDurationMs) + '</strong></span>' +
+        '<span>\uD83D\uDC64 ' + esc(playlist.owner ? playlist.owner.display_name : '') + '</span>' +
+      '</div>' +
+    '</div>';
+
+  // Render tracks
+  var list = document.getElementById('trackList');
+  var empty = document.getElementById('trackEmpty');
+
+  if (tracks.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    list.innerHTML = tracks.map(function(t, i) { return renderTrackRow(t, i); }).join('');
+  }
+}
+
+function renderTrackRow(item, index) {
+  var t = item.track;
+  if (!t) return '';
+  var imgs = t.album && t.album.images;
+  var coverUrl = imgs && imgs[2] ? imgs[2].url : (imgs && imgs[0] ? imgs[0].url : null);
+  var artists = t.artists ? t.artists.map(function(a) { return a.name; }).join(', ') : 'Tuntematon';
+  var album = t.album ? t.album.name : '';
+
+  return '<div class="track-row">' +
+    '<span class="track-num">' + (index + 1) + '</span>' +
+    (coverUrl
+      ? '<img class="track-cover" src="' + coverUrl + '" alt="" loading="lazy" />'
+      : '<div class="track-cover" style="display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:var(--c-text2)">\uD83C\uDFB5</div>') +
+    '<div class="track-info">' +
+      '<div class="track-name">' + esc(t.name) + '</div>' +
+      '<div class="track-artist">' + esc(artists) + '</div>' +
+    '</div>' +
+    '<div class="track-album">' + esc(album) + '</div>' +
+    '<span class="track-duration">' + formatMs(t.duration_ms) + '</span>' +
+    '</div>';
+}
+
+function formatMs(ms) {
+  if (!ms) return '--:--';
+  var secs = Math.floor(ms / 1000);
+  var m = Math.floor(secs / 60);
+  var s = secs % 60;
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function formatDuration(ms) {
+  var hrs = Math.floor(ms / 3600000);
+  var mins = Math.floor((ms % 3600000) / 60000);
+  if (hrs > 0) return hrs + ' h ' + mins + ' min';
+  return mins + ' min';
+}
+
+// ═══════════════════════════════════════════════════════════
+// FLOW: OPEN PLAYLIST
+// ═══════════════════════════════════════════════════════════
+
+async function openPlaylist(playlistId) {
+  showLoading('Haetaan biisejä...');
+
+  var playlist = null;
+  for (var i = 0; i < allPlaylists.length; i++) {
+    if (allPlaylists[i].id === playlistId) { playlist = allPlaylists[i]; break; }
+  }
+  if (!playlist) { showView('playlists'); return; }
+
+  try {
+    var offset = 0;
+    var limit = 100;
+    var allTrackItems = [];
+    var totalTracks = playlist.tracks ? playlist.tracks.total : 0;
+
+    while (true) {
+      var progress = totalTracks > 0 ? Math.round((allTrackItems.length / totalTracks) * 100) : 50;
+      setLoadingProgress(progress, 'Haetaan biisejä... (' + allTrackItems.length + '/' + (totalTracks || '?') + ')');
+
+      var page = await spotifyFetch('/playlists/' + playlistId + '/tracks?limit=' + limit + '&offset=' + offset);
+      if (!page || page._error) break;
+
+      var validTracks = page.items.filter(function(i) { return i.track; });
+      allTrackItems.push.apply(allTrackItems, validTracks);
+
+      if (totalTracks === 0) totalTracks = page.total || 0;
+
+      if (!page.next) break;
+      offset += limit;
+      await sleep(30);
+    }
+
+    renderPlaylistDetail(playlist, allTrackItems);
+    showView('playlist-detail');
+    window.scrollTo(0, 0);
+  } catch(err) {
+    console.error('Virhe biisien haussa:', err);
+    showView('playlists');
+  }
+}
+
+function goToPlaylists() {
+  showView('playlists');
+  window.scrollTo(0, 0);
+}
+
+// ═══════════════════════════════════════════════════════════
+// FLOW: LOAD ALL PLAYLISTS
+// ═══════════════════════════════════════════════════════════
+
+async function loadPlaylists() {
+  showLoading('Haetaan soittolistojasi...');
+
+  try {
+    // Fetch profile first
+    var profile = await fetchProfile();
+    if (profile && !profile._error) {
+      updateHeaderUser(profile);
+    }
+
+    // Fetch all playlists
+    var offset = 0;
+    var limit = 50;
+    var all = [];
+
+    while (true) {
+      setLoadingProgress(Math.min(80, Math.round((all.length / Math.max(50, all.length + 50)) * 100)),
+        'Haetaan soittolistoja... (' + all.length + ' löydetty)');
+
+      var page = await spotifyFetch('/me/playlists?limit=' + limit + '&offset=' + offset);
+      if (!page || page._error) {
+        if (page && page._error === 401) { logout(); return; }
+        break;
+      }
+
+      all.push.apply(all, page.items);
+
+      if (!page.next) break;
+      offset += limit;
+      await sleep(50);
+    }
+
+    setLoadingProgress(100, 'Löydettiin ' + all.length + ' soittolistaa!');
+
+    renderPlaylists(all);
+    showView('playlists');
+  } catch(err) {
+    console.error('Virhe soittolistojen haussa:', err);
+    showView('login');
+    showMessage('login', 'Soittolistojen haku epäonnistui. Kokeile uudelleen.', 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// HEADER & USER STATUS
+// ═══════════════════════════════════════════════════════════
+
+function updateHeaderUser(profile) {
+  var right = document.getElementById('headerRight');
+  var imageHtml = profile && profile.images && profile.images[0]
+    ? '<img src="' + profile.images[0].url + '" alt="" />'
+    : '';
+  right.innerHTML =
+    '<span style="color:var(--c-text2);font-size:0.8rem;display:flex;align-items:center;gap:0.4rem">' +
+      imageHtml +
+      (profile ? profile.display_name : 'Kirjautunut') +
+    '</span>' +
+    '<button class="btn btn-sm btn-outline" onclick="logout()">Kirjaudu ulos</button>';
+}
+
+function updateLoginUI(isLoggedIn) {
+  var statusEl = document.getElementById('spotifyStatus');
+  var statusText = document.getElementById('spotifyStatusText');
+
+  if (isLoggedIn) {
+    statusEl.innerHTML = '<span style="color:var(--c-success);font-weight:600">\u2705 Kirjautunut Spotifyhin</span>';
+    statusText.textContent = 'Kirjautuminen onnistui! Ladataan soittolistojasi...';
+  } else {
+    statusEl.innerHTML = '<button class="btn btn-primary" onclick="spotifyLogin()">\uD83C\uDFB5 Kirjaudu Spotifyhin</button>';
+    statusText.textContent = 'Kirjaudu nähdäksesi soittolistasi.';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOGOUT
+// ═══════════════════════════════════════════════════════════
+
+function logout() {
+  localStorage.removeItem('spotify_tokens');
+  localStorage.removeItem('spotify_profile');
+  allPlaylists = [];
+  currentPlaylist = null;
+  allTracks = [];
+  updateLoginUI(false);
+  document.getElementById('headerRight').innerHTML =
+    '<span style="color:var(--c-text2);font-size:0.8rem">Ei kirjautunut</span>';
+  showView('login');
+  window.scrollTo(0, 0);
+}
+
+// ═══════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════
+
+function sleep(ms) {
+  return new Promise(function(r) { setTimeout(r, ms); });
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+
+async function init() {
+  // Fill client ID
+  var saved = localStorage.getItem('spotify_client_id');
+  document.getElementById('clientIdInput').value = saved || DEFAULT_CLIENT_ID;
+  if (!saved) {
+    localStorage.setItem('spotify_client_id', DEFAULT_CLIENT_ID);
+  }
+
+  // Check for Spotify callback
+  var params = new URLSearchParams(window.location.search);
+  if (params.has('code')) {
+    var ok = await handleSpotifyCallback();
+    if (ok) {
+      updateLoginUI(true);
+      await loadPlaylists();
+      return;
+    }
+    updateLoginUI(false);
+    return;
+  }
+
+  // Check if already authenticated
+  var tokens = getStoredTokens();
+  if (tokens && Date.now() < tokens.expires_at) {
+    updateLoginUI(true);
+    await loadPlaylists();
+    return;
+  }
+
+  // Try refresh
+  if (tokens && tokens.refresh_token) {
+    var newToken = await getValidToken(true);
+    if (newToken) {
+      updateLoginUI(true);
+      await loadPlaylists();
+      return;
+    }
+  }
+
+  // Not logged in
+  updateLoginUI(false);
+  showView('login');
+}
+
+init();
+
+console.log('\uD83C\uDFA7 Psyko valmiina. Selaa soittolistojasi!');
+console.log('\uD83D\uDCA1 Kirjaudu Spotifyhin \u2192 n\u00E4et kaikki soittolistat \u2192 klikkaa n\u00E4hd\u00E4ksesi biisit.');
+</script>
+
 </body>
+</html>
 </html>

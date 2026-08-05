@@ -32,7 +32,9 @@ app.post('/api/spotify', async (req, res) => {
 const PORT = 5555;
 
 app.listen(PORT, () => {
-  console.log(`🎧 Psyko kuuntelee → http://localhost:${PORT}/demo.html`);
+  console.log(`🎧 Psyko kuuntelee → http://localhost:${PORT}/`);
+  console.log(`   Landing page:    http://localhost:${PORT}/`);
+  console.log(`   Demo-analyysi:   http://localhost:${PORT}/demo.html`);
   console.log(`   Spotify API -proxy: POST /api/spotify`);
   console.log(`   Staattiset tiedostot: ${publicDir}`);
 });

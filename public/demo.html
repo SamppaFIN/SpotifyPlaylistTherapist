@@ -211,7 +211,10 @@
 <body>
 
 <header>
-  <div class="logo">🎧 <span>Psyko</span>Analyysi</div>
+  <div style="display:flex;align-items:center;gap:0.75rem">
+    <a href="." style="color:var(--c-text2);text-decoration:none;font-size:0.9rem" title="Takaisin soittolistaselaimeen">←</a>
+    <div class="logo">🎧 <span>Psyko</span>Analyysi</div>
+  </div>
   <button class="btn btn-sm btn-outline" id="btnLogout" style="display:none" onclick="logout()">Kirjaudu ulos</button>
   <button class="btn btn-sm btn-outline" id="btnReset" onclick="resetApp()">↻ Uusi analyysi</button>
 </header>

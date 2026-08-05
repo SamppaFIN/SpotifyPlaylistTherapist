@@ -1,7 +1,7 @@
 {
   "name": "spotify-playlist-therapist",
-  "version": "0.1.0",
-  "description": "Hae Spotify-soittolista ja tee sen biiseistä psykoanalyysi",
+  "version": "0.2.0",
+  "description": "Selaa Spotify-soittolistojasi — analyysit tulossa myöhemmin",
   "type": "module",
   "scripts": {
     "test": "vitest run",
