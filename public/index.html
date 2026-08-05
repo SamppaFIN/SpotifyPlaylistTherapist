@@ -934,34 +934,59 @@ async function startAnalysis() {
 
   btn.disabled = true;
   btn.textContent = '⏳ Analysoi...';
-  hint.textContent = 'Haetaan audio-featureita...';
+  hint.textContent = 'Kerätään biisitietoja...';
   container.style.display = 'none';
 
   try {
-    // Step 1: Collect track IDs
+    // Step 1: Collect track data
     var trackIds = [];
+    var trackNames = [];
     for (var i = 0; i < allTracks.length; i++) {
       var tr = allTracks[i].track || allTracks[i].item;
-      if (tr && tr.id) trackIds.push(tr.id);
+      if (!tr || !tr.id) continue;
+      trackIds.push(tr.id);
+      if (trackNames.length < 50) {
+        trackNames.push({
+          name: tr.name,
+          artist: tr.artists ? tr.artists.map(function(a) { return a.name; }).join(', ') : '',
+          album: tr.album ? tr.album.name : '',
+        });
+      }
     }
 
-    // Step 2: Fetch audio features
-    hint.textContent = 'Haetaan audio-featureita (' + trackIds.length + ' biisiä)...';
-    var features = await fetchAllAudioFeatures(trackIds);
-    if (!features || features.length === 0) {
-      throw new Error('Audio-featureita ei saatu haettua.');
+    // Step 2: Try audio features (may be unavailable on newer Spotify apps)
+    var features = null;
+    var hasAudioFeatures = false;
+    hint.textContent = 'Haetaan audio-featureita...';
+    try {
+      features = await fetchAllAudioFeatures(trackIds);
+      hasAudioFeatures = features && features.length > 0;
+    } catch(afErr) {
+      console.warn('Audio features not available:', afErr);
     }
 
-    // Step 3: Compute stats
-    hint.textContent = 'Lasketaan analyysiä...';
-    var avg = computeAverages(features);
-    var emotion = mapToCircumplex(avg);
-    var bigFive = estimateBigFive(avg);
-    var vibe = describeVibe(avg);
-    var insanity = computeInsanity(avg, bigFive);
-    var rating = computePlaylistRating(avg);
+    // Step 3: Compute stats (if available) or use fallback estimates
+    var avg, emotion, bigFive, vibe, insanity, rating;
+    if (hasAudioFeatures) {
+      avg = computeAverages(features);
+      emotion = mapToCircumplex(avg);
+      bigFive = estimateBigFive(avg);
+      vibe = describeVibe(avg);
+      insanity = computeInsanity(avg, bigFive);
+      rating = computePlaylistRating(avg);
+    } else {
+      // Fallback: neutral estimates
+      avg = { count: trackIds.length, acousticness: 0.3, danceability: 0.45, energy: 0.5, instrumentalness: 0.1, liveness: 0.2, loudness: -8, speechiness: 0.1, valence: 0.5, tempo: 120, majorKeyRatio: 0.6 };
+      emotion = { quadrant: 'analysoitu 🧠', label: 'analysoitu', valence: 0.5, energy: 0.5 };
+      bigFive = { openness: 0.5, conscientiousness: 0.5, extraversion: 0.5, agreeableness: 0.5, neuroticism: 0.5,
+        labels: { openness: 'LLM-arvio', conscientiousness: 'LLM-arvio', extraversion: 'LLM-arvio', agreeableness: 'LLM-arvio', neuroticism: 'LLM-arvio' } };
+      vibe = { primaryMood: 'LLM-arvio 🧠', energyLevel: 'LLM-arvio', danceabilityLevel: 'LLM-arvio', playlistType: 'LLM-arvio', keyMood: 'LLM-arvio', tempoLabel: 'LLM-arvio' };
+      insanity = 42;
+      rating = 7;
+      hint.textContent = 'Audio-featureita ei saatavilla — käytetään LLM-analyysiä...';
+    }
 
-    // Step 4: Collect top tracks & artists
+    // Step 4: Collect top artists & tracks
     var artistCount = {};
     for (var i2 = 0; i2 < allTracks.length; i2++) {
       var tr2 = allTracks[i2].track || allTracks[i2].item;
@@ -972,9 +997,9 @@ async function startAnalysis() {
       }
     }
     var sortedArtists = Object.keys(artistCount).sort(function(a, b) { return artistCount[b] - artistCount[a]; });
-    var topArtists = sortedArtists.slice(0, 8);
+    var topArtists = sortedArtists.slice(0, 10);
 
-    var topTracks = allTracks.slice(0, 10).map(function(t) {
+    var topTracks = allTracks.slice(0, 15).map(function(t) {
       var tr3 = t.track || t.item;
       return { name: tr3.name, artist: tr3.artists ? tr3.artists.map(function(a) { return a.name; }).join(', ') : '' };
     });
@@ -983,7 +1008,27 @@ async function startAnalysis() {
     hint.textContent = 'Psyko miettii... (OpenRouter)';
     var llmResult = null;
     try {
-      llmResult = await callOpenRouter(currentPlaylist.name, avg, topTracks, topArtists, allTracks.length);
+      llmResult = await callOpenRouter(currentPlaylist.name, avg, topTracks, topArtists, allTracks.length, hasAudioFeatures);
+      // Use LLM-provided values where available
+      if (llmResult.insanityRating) insanity = llmResult.insanityRating;
+      if (llmResult.playlistRating) rating = llmResult.playlistRating;
+      if (llmResult.vibe) vibe = llmResult.vibe;
+      if (llmResult.bigFive) {
+        bigFive = {
+          openness: llmResult.bigFive.openness || 0.5,
+          conscientiousness: llmResult.bigFive.conscientiousness || 0.5,
+          extraversion: llmResult.bigFive.extraversion || 0.5,
+          agreeableness: llmResult.bigFive.agreeableness || 0.5,
+          neuroticism: llmResult.bigFive.neuroticism || 0.5,
+          labels: {
+            openness: llmResult.bigFive.opennessLabel || 'LLM-arvio',
+            conscientiousness: llmResult.bigFive.conscientiousnessLabel || 'LLM-arvio',
+            extraversion: llmResult.bigFive.extraversionLabel || 'LLM-arvio',
+            agreeableness: llmResult.bigFive.agreeablenessLabel || 'LLM-arvio',
+            neuroticism: llmResult.bigFive.neuroticismLabel || 'LLM-arvio',
+          },
+        };
+      }
     } catch(llmErr) {
       console.warn('LLM error:', llmErr);
       // Fallback: generate from data only
@@ -1416,33 +1461,43 @@ function computePlaylistRating(avg) {
 // OPENROUTER LLM CALL
 // ═══════════════════════════════════════════════════════════
 
-async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCount) {
+async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCount, hasAudioFeatures) {
   var apiKey = getOpenRouterKey();
   if (!apiKey) throw new Error('OpenRouter API-avain puuttuu. Klikkaa ⚙️ ja syötä avain.');
 
-  var prompt = 'Olet Psyko, musiikillinen psykoanalyytikko. Analysoit Spotify-soittolistoja ja niiden audio-ominaisuuksia luodaksesi humoristisen mutta oivaltavan psykologisen profiilin kuuntelijasta. VASTAA AINOASTAAN JSON-MUODOSSA, ei muuta tekstiä.\n\n' +
+  var prompt = 'Olet Psyko, musiikillinen psykoanalyytikko. Analysoit Spotify-soittolistoja luodaksesi humoristisen mutta oivaltavan psykologisen profiilin kuuntelijasta. VASTAA AINOASTAAN JSON-MUODOSSA, ei muuta tekstiä.\n\n' +
     'Soittolista: ' + playlistName + '\n' +
-    'Biisejä: ' + trackCount + '\n' +
-    '\nAudio-ominaisuuksien keskiarvot:\n' +
-    '- Valence (positiivisuus): ' + pct(avg.valence) + '\n' +
-    '- Energy (energisyys): ' + pct(avg.energy) + '\n' +
-    '- Danceability (tanssittavuus): ' + pct(avg.danceability) + '\n' +
-    '- Acousticness (akustisuus): ' + pct(avg.acousticness) + '\n' +
-    '- Instrumentalness: ' + pct(avg.instrumentalness) + '\n' +
-    '- Tempo: ' + Math.round(avg.tempo) + ' BPM\n' +
-    '- Duuri/molli: ' + pct(avg.majorKeyRatio) + ' duuria\n' +
-    '\nTop-artistit: ' + topArtists.join(', ') + '\n' +
-    'Top-biisit: ' + topTracks.map(function(t, i) { return (i+1) + '. ' + t.name + ' - ' + t.artist; }).join('; ') + '\n' +
-    '\nAnalysoi ja vastaa JSON:\n' +
+    'Biisejä: ' + trackCount + '\n\n';
+
+  if (hasAudioFeatures) {
+    prompt += 'Audio-ominaisuuksien keskiarvot:\n' +
+      '- Valence (positiivisuus): ' + pct(avg.valence) + '\n' +
+      '- Energy (energisyys): ' + pct(avg.energy) + '\n' +
+      '- Danceability (tanssittavuus): ' + pct(avg.danceability) + '\n' +
+      '- Acousticness (akustisuus): ' + pct(avg.acousticness) + '\n' +
+      '- Instrumentalness: ' + pct(avg.instrumentalness) + '\n' +
+      '- Tempo: ' + Math.round(avg.tempo) + ' BPM\n' +
+      '- Duuri/molli: ' + pct(avg.majorKeyRatio) + ' duuria\n\n';
+  }
+
+  prompt += 'Top-artistit (esiintymiskertojen mukaan): ' + topArtists.join(', ') + '\n\n' +
+    'Top-biisit:\n' +
+    topTracks.map(function(t, i) { return (i+1) + '. ' + t.artist + ' — ' + t.name; }).join('\n') + '\n\n' +
+    'Analysoi tämä soittolista ja sen perusteella kuuntelijan persoonallisuus. Kerro suomeksi, humoristisella ja sarkastisella tyylillä.\n\n' +
+    'VASTAA JSON:\n' +
     '{\n' +
-    '  "headline": "räväkkä otsikko (max 10 sanaa, suomeksi)",\n' +
-    '  "emotionalState": "tunnetila-analyysi (2-3 lausetta suomeksi)",\n' +
-    '  "personality": "persoonallisuusanalyysi (2-3 lausetta suomeksi)",\n' +
-    '  "obsessiveThemes": "pakkomielteet ja toistuvat teemat (1-2 lausetta suomeksi)",\n' +
-    '  "freudianDiagnosis": "freudilainen diagnoosi (1-2 lausetta suomeksi)",\n' +
-    '  "freudianStage": "mihin Freudin psykoseksuaaliseen kehitysvaiheeseen kuuntelija on jäänyt (suomeksi)",\n' +
+    '  "headline": "räväkkä otsikko (max 10 sanaa)",\n' +
+    '  "emotionalState": "tunnetila-analyysi (2-3 lausetta)",\n' +
+    '  "personality": "persoonallisuusanalyysi (2-3 lausetta)",\n' +
+    '  "obsessiveThemes": "pakkomielteet ja toistuvat teemat (1-2 lausetta)",\n' +
+    '  "freudianDiagnosis": "freudilainen diagnoosi (1-2 lausetta)",\n' +
+    '  "freudianStage": "mihin Freudin psykoseksuaaliseen kehitysvaiheeseen kuuntelija on jäänyt",\n' +
     '  "adjectives": ["adjektiivi1", "adjektiivi2", "adjektiivi3"],\n' +
-    '  "recommendation": "suositus kenelle tai mihin tilanteeseen soittolista sopii (suomeksi)"\n' +
+    '  "insanityRating": 42,\n' +
+    '  "playlistRating": 7,\n' +
+    '  "recommendation": "suositus kenelle tai mihin tilanteeseen soittolista sopii",\n' +
+    '  "vibe": {"primaryMood": "...", "energyLevel": "...", "danceabilityLevel": "...", "playlistType": "...", "keyMood": "...", "tempoLabel": "..."},\n' +
+    '  "bigFive": {"openness": 0.5, "conscientiousness": 0.5, "extraversion": 0.5, "agreeableness": 0.5, "neuroticism": 0.5, "opennessLabel": "...", "conscientiousnessLabel": "...", "extraversionLabel": "...", "agreeablenessLabel": "...", "neuroticismLabel": "..."}\n' +
     '}';
 
   var res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
