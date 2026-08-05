@@ -1147,6 +1147,21 @@ function renderAnalysis(r) {
       '</div>';
   }
 
+  // Lyrical Quotes
+  if (p.lyricalQuotes && p.lyricalQuotes.length > 0) {
+    html += '<div class="analysis-section" style="border-left:3px solid oklch(0.62 0.20 145)">' +
+      '<h3>🎤 Sanoitukset paljastavat</h3>';
+    for (var lq = 0; lq < p.lyricalQuotes.length; lq++) {
+      var q = p.lyricalQuotes[lq];
+      html += '<div style="margin-bottom:0.75rem">' +
+        '<p style="font-style:italic;font-size:0.85rem;color:var(--c-text);padding:0.5rem 0.75rem;background:var(--c-bg);border-radius:6px;border-left:3px solid oklch(0.62 0.20 145)">"' + esc(q.quote) + '"</p>' +
+        '<p style="font-size:0.72rem;color:var(--c-text2);margin-top:0.25rem">🎵 ' + esc(q.song) + '</p>' +
+        '<p style="font-size:0.8rem;margin-top:0.15rem">' + esc(q.reveals) + '</p>' +
+        '</div>';
+    }
+    html += '</div>';
+  }
+
   // Vibe
   html += '<div class="analysis-section">' +
     '<h3>🎵 Vibe-yhteenveto</h3>' +
@@ -1493,7 +1508,8 @@ async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCou
     '- playlistRating: 1-10\n' +
     '- valencePct, energyPct, danceabilityPct: 0-100\n' +
     '- tempoBpm: arvioitu BPM\n' +
-    '- bigFive: jokainen 0.0-1.0, EI SAA OLLA 0.5! Arvioi artistien perusteella.\n\n' +
+    '- bigFive: jokainen 0.0-1.0, EI SAA OLLA 0.5! Arvioi artistien perusteella.\n' +
+    '- SITEERAA vähintään kahta biisiä ja niiden sanoituksia todisteena analyysille. Käytä oikeita sanoituksia!\n\n' +
     'VASTAA JSON:\n' +
     '{\n' +
     '  "headline": "...",\n' +
@@ -1510,6 +1526,10 @@ async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCou
     '  "energyPct": LUKU,\n' +
     '  "danceabilityPct": LUKU,\n' +
     '  "tempoBpm": LUKU,\n' +
+    '  "lyricalQuotes": [\n' +
+    '    {"song": "Biisin nimi - Artisti", "quote": "sitaatti sanoituksista (suomeksi tai englanniksi)", "reveals": "mitä tämä kertoo kuuntelijasta (1 lause)"},\n' +
+    '    {"song": "Toinen biisi - Artisti", "quote": "toinen sitaatti", "reveals": "mitä tämä paljastaa (1 lause)"}\n' +
+    '  ],\n' +
     '  "vibe": {"primaryMood":"...","energyLevel":"...","danceabilityLevel":"...","playlistType":"...","keyMood":"...","tempoLabel":"..."},\n' +
     '  "bigFive": {\n' +
     '    "openness": LUKU,"conscientiousness": LUKU,"extraversion": LUKU,"agreeableness": LUKU,"neuroticism": LUKU,\n' +
@@ -1529,7 +1549,7 @@ async function callOpenRouter(playlistName, avg, topTracks, topArtists, trackCou
         { role: 'user', content: prompt }
       ],
       temperature: 0.9,
-      max_tokens: 1000,
+      max_tokens: 1200,
     }),
   });
 
