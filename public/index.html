@@ -341,8 +341,16 @@
     <label style="font-size:0.8rem;color:var(--c-text2)">OpenRouter API Key</label>
     <input type="password" id="openrouterKeyInput" placeholder="sk-or-v1-..." />
     <p style="font-size:0.7rem;color:var(--c-text2);margin:0.25rem 0 0.75rem">
-      Tarvitaan psykoanalyysin generointiin. Avainta ei lähetetä minnekään muualle kuin OpenRouteriin.
+      Tarvitaan psykoanalyysin generointiin. <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--c-accent)">Luo ilmainen avain</a>
     </p>
+    <details style="margin-bottom:0.75rem">
+      <summary style="font-size:0.8rem;color:var(--c-text2);cursor:pointer">Edistyneet: Spotify Client ID</summary>
+      <label style="font-size:0.75rem;color:var(--c-text2);margin-top:0.5rem;display:block">Oma Spotify Client ID (valinnainen)</label>
+      <input type="text" id="clientIdInput" placeholder="52ad6316..." />
+      <p style="font-size:0.65rem;color:var(--c-text2);margin-top:0.2rem">
+        <a href="https://developer.spotify.com/dashboard" target="_blank" style="color:var(--c-accent)">Luo oma Client ID</a> — Redirect URI: <code id="redirectUriDisplay"></code>
+      </p>
+    </details>
     <div style="display:flex;gap:0.5rem">
       <button class="btn btn-primary btn-sm" onclick="saveSettings()">💾 Tallenna</button>
       <button class="btn btn-outline btn-sm" onclick="toggleSettings()">Peruuta</button>
@@ -359,19 +367,7 @@
       <p>Liitä Spotify ja selaa kaikkia soittolistojasi. Psyko auttaa ymmärtämään musiikkiasi — analyysi tulossa myöhemmin.</p>
 
       <div class="login-card">
-        <label>1️⃣ Spotify Client ID</label>
-        <div style="display:flex;gap:0.5rem;margin-top:0.25rem">
-          <input type="text" id="clientIdInput" placeholder="52ad6316..." style="flex:1" />
-          <button class="btn btn-sm btn-outline" onclick="saveClientId()" style="white-space:nowrap">💾 Tallenna</button>
-        </div>
-        <p class="hint">
-          <a href="https://developer.spotify.com/dashboard" target="_blank">Luo Client ID</a> —
-          Redirect URI: <code id="redirectUriDisplay"></code>
-        </p>
-      </div>
-
-      <div class="login-card">
-        <label>2️⃣ Kirjaudu Spotifyhin</label>
+        <label>🔑 Kirjaudu Spotifyhin</label>
         <div id="spotifyStatus" style="margin-top:0.25rem">
           <button class="btn btn-primary" onclick="spotifyLogin()">
             🎵 Kirjaudu Spotifyhin
@@ -1321,15 +1317,17 @@ function toggleSettings() {
     modal.classList.remove('open');
   } else {
     document.getElementById('openrouterKeyInput').value = getOpenRouterKey();
+    document.getElementById('clientIdInput').value = getClientId();
+    document.getElementById('redirectUriDisplay').textContent = REDIRECT_URI;
     modal.classList.add('open');
   }
 }
 
 function saveSettings() {
   var key = document.getElementById('openrouterKeyInput').value.trim();
-  if (key) {
-    localStorage.setItem('psyko_openrouter_key', key);
-  }
+  if (key) localStorage.setItem('psyko_openrouter_key', key);
+  var clientId = document.getElementById('clientIdInput').value.trim();
+  if (clientId) localStorage.setItem('spotify_client_id', clientId);
   document.getElementById('settingsModal').classList.remove('open');
 }
 
