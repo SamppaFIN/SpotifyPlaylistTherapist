@@ -1481,7 +1481,7 @@ async function callOpenRouter(playlistName, avg, allTrackNames, topArtists, trac
   if (!apiKey) throw new Error('OpenRouter API-avain puuttuu. Klikkaa ⚙️ ja syötä avain.');
 
   // Limit tracks to avoid token overflow (max ~50 tracks)
-  var tracksToList = allTrackNames.slice(0, 50);
+  var tracksToList = allTrackNames.slice(0, 20);
   var trackListStr = tracksToList.map(function(t, i) { return (i+1) + '. ' + t.artist + ' — ' + t.name; }).join('\n');
   var remainingNote = allTrackNames.length > 50 ? '\n(...ja ' + (allTrackNames.length - 50) + ' muuta biisiä)\n' : '';
 
@@ -1548,7 +1548,7 @@ async function callOpenRouter(playlistName, avg, allTrackNames, topArtists, trac
         { role: 'user', content: prompt }
       ],
       temperature: 0.9,
-      max_tokens: 1500,
+      max_tokens: 800,
     }),
   });
 
