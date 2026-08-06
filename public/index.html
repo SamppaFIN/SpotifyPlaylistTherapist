@@ -1543,12 +1543,12 @@ async function callOpenRouter(playlistName, avg, allTrackNames, topArtists, trac
       'Authorization': 'Bearer ' + apiKey,
     },
     body: JSON.stringify({
-      model: 'openai/gpt-4o-mini',
+      model: 'google/gemma-4-26b-a4b-it:free',
       messages: [
         { role: 'user', content: prompt }
       ],
       temperature: 0.9,
-      max_tokens: 800,
+      max_tokens: 600,
     }),
   });
 
