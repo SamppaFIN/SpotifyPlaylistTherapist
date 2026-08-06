@@ -1056,7 +1056,10 @@ async function runAnalysis() {
     renderAnalysis(result);
   } catch(err) {
     loading.style.display = 'none';
-    content.innerHTML = '<p style="color:var(--c-danger);text-align:center;font-size:0.85rem">❌ ' + esc(err.message || 'Tuntematon virhe') + '</p>';
+    content.innerHTML = '<div style="text-align:center;padding:1rem">' +
+      '<p style="color:var(--c-danger);font-size:0.85rem;margin-bottom:0.75rem">❌ ' + esc(err.message || 'Tuntematon virhe') + '</p>' +
+      '<button class="btn btn-outline btn-sm" onclick="retryAnalysis()">🔄 Yritä uudelleen</button>' +
+      '</div>';
     console.error('Analysis error:', err);
   }
 }
@@ -1189,12 +1192,31 @@ function renderAnalysis(r) {
   // Footer
   html += '<div style="text-align:center;padding:0.5rem;color:var(--c-text2);font-size:0.7rem">' +
     '🎧 Analysoitu ' + r.meta.trackCount + ' biisistä • ' + formatDuration(r.meta.totalDurationMs) +
-    (r.llm ? ' • LLM: OpenRouter' : ' • ⚠️ LLM ei saatavilla — data-analyysi') +
+    (r.llm ? ' • LLM: OpenRouter' : ' • ⚠️ LLM ei saatavilla') +
     '</div>';
+
+  // Retry button (always show, more prominent if no LLM data)
+  if (!r.llm) {
+    html += '<div style="text-align:center;padding:0 0.5rem 0.75rem">' +
+      '<button class="btn btn-analyze btn-sm" onclick="retryAnalysis()" style="font-size:0.85rem">🔄 Analysoi uudelleen</button>' +
+      '</div>';
+  } else {
+    html += '<div style="text-align:center;padding:0 0.5rem 0.75rem">' +
+      '<button class="btn btn-outline btn-sm" onclick="retryAnalysis()" style="font-size:0.75rem">🔄 Päivitä analyysi</button>' +
+      '</div>';
+  }
 
   container.innerHTML = html;
   container.style.display = 'block';
   window.scrollTo({ top: container.offsetTop - 80, behavior: 'smooth' });
+}
+
+function retryAnalysis() {
+  // Clear cache for current playlist and re-run
+  if (currentPlaylist) {
+    delete analysisCache[currentPlaylist.id];
+  }
+  runAnalysis();
 }
 
 function renderBigFiveBar(name, value, desc) {
